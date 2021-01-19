@@ -45,7 +45,9 @@
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/sensors/sensors.hh>
 #include <gazebo/transport/transport.hh>
-#include "include/ArduPilotPlugin.hh"
+
+#include "ArduPilotPlugin.hh"
+#include "AnemometerSensor.hh"
 
 #define MAX_MOTORS 255
 
@@ -62,8 +64,36 @@ struct ServoPacket
 };
 
 /// \brief Flight Dynamics Model packet that is sent back to the ArduPilot
+///
+///  -  the FDM model packet must match the struct Gazebo::fdm_packet
+///     defined in ${ARDUPILOT_HOME}/libraries/SITL/SIM_Gazebo.h
+///  -  the bitmask is used to mark which sensor states are being
+///     populated by the simulation, this uses the approach taken in
+///     ${ARDUPILOT_HOME}/libraries/SITL/SIM_JSON.h
+///
 struct fdmPacket
 {
+  /// \brief Enum used to set the bitmask
+  enum DataKey {
+    TIMESTAMP   = 1U << 0,  // timestamp - required
+    GYRO        = 1U << 1,  // imu_angular_velocity_rpy - required
+    ACCEL_BODY  = 1U << 2,  // imu_linear_acceleration_xyz - required
+    POSITION    = 1U << 3,  // position_xyz - required
+    EULER_ATT   = 1U << 4,  // not used
+    QUAT_ATT    = 1U << 5,  // imu_orientation_quat - required
+    VELOCITY    = 1U << 6,  // velocity_xyz - required
+    RNG_1       = 1U << 7,  // not used
+    RNG_2       = 1U << 8,  // not used
+    RNG_3       = 1U << 9,  // not used
+    RNG_4       = 1U << 10, // not used
+    RNG_5       = 1U << 11, // not used
+    RNG_6       = 1U << 12, // not used
+    WIND_DIR    = 1U << 13, // wind_apparent.direction - optional
+    WIND_SPD    = 1U << 14, // wind_apparent.speed - optional
+  };
+  /// \brief bitmask specifying which packet fields are set 
+  uint16_t bitmask = TIMESTAMP | GYRO | ACCEL_BODY | POSITION | QUAT_ATT | VELOCITY;
+
   /// \brief packet timestamp
   double timestamp;
 
@@ -103,6 +133,12 @@ struct fdmPacket
   /// \brief Model rangefinder value. Default to -1 to use sitl rangefinder.
   double rangefinder = -1.0;
 */
+  /// \brief Apparent wind speed and direction
+  struct {
+    float direction;  // apparent wind direction in radians
+    float speed;      // apparent wind speed in m/s 
+  } wind_apparent;
+
 };
 
 /// \brief Control class
@@ -357,6 +393,9 @@ class gazebo::ArduPilotPluginPrivate
 
   /// \brief Pointer to an Rangefinder sensor
   public: sensors::RaySensorPtr rangefinderSensor;
+
+  /// \brief Pointer to an Anemometer sensor
+  public: sensors::AnemometerSensorPtr windSensor;
 
   /// \brief false before ardupilot controller is online
   /// to allow gazebo to continue without waiting
@@ -623,7 +662,39 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     controlSDF = controlSDF->GetNextElement("control");
   }
 
-  // Get sensors
+  // Load sensors
+  LoadImuSensor(_model, _sdf);
+  LoadWindSensor(_model, _sdf);
+
+  // @TODO NOT MERGED IN MASTER YET
+//   LoadGpsensor(_model, _sdf);
+//   LoadRaySensor(_model, _sdf);
+
+  // Controller time control.
+  this->dataPtr->lastControllerUpdateTime = 0;
+
+  // Initialise ardupilot sockets
+  if (!InitArduPilotSockets(_sdf))
+  {
+    return;
+  }
+
+  // Missed update count before we declare arduPilotOnline status false
+  this->dataPtr->connectionTimeoutMaxCount =
+    _sdf->Get("connectionTimeoutMaxCount", 10).first;
+
+  // Listen to the update event. This event is broadcast every simulation
+  // iteration.
+  this->dataPtr->updateConnection = event::Events::ConnectWorldUpdateBegin(
+      std::bind(&ArduPilotPlugin::OnUpdate, this));
+
+  gzlog << "[" << this->dataPtr->modelName << "] "
+        << "ArduPilot ready to fly. The force will be with you" << std::endl;
+}
+
+/////////////////////////////////////////////////
+void ArduPilotPlugin::LoadImuSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf)
+{
   std::string imuName =
     _sdf->Get("imuName", static_cast<std::string>("imu_sensor")).first;
   std::vector<std::string> imuScopedName =
@@ -685,10 +756,92 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
       return;
     }
   }
-/* NOT MERGED IN MASTER YET
-    // Get GPS
-  std::string gpsName = _sdf->Get("imuName", static_cast<std::string>("gps_sensor")).first;
-  std::vector<std::string> gpsScopedName = SensorScopedName(this->dataPtr->model, gpsName);
+}
+
+/////////////////////////////////////////////////
+void ArduPilotPlugin::LoadWindSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf)
+{
+    // the anemometer is optional
+    if (!_sdf->HasElement("anemometerName"))
+    {
+        return;
+    }
+
+    std::string anemometerName =
+        _sdf->Get("anemometerName", static_cast<std::string>("anemometer_sensor")).first;
+    std::vector<std::string> anemometerScopedName =
+        this->dataPtr->model->SensorScopedName(anemometerName);
+
+    if (anemometerScopedName.size() > 1)
+    {
+        gzwarn << "[" << this->dataPtr->modelName << "] "
+            << "multiple names match [" << anemometerName << "] using first found"
+            << " name.\n";
+        for (unsigned k = 0; k < anemometerScopedName.size(); ++k)
+        {
+            gzwarn << "  sensor " << k << " [" << anemometerScopedName[k] << "].\n";
+        }
+    }
+
+    if (anemometerScopedName.size() > 0)
+    {
+        this->dataPtr->windSensor = std::dynamic_pointer_cast<sensors::AnemometerSensor>
+        (sensors::SensorManager::Instance()->GetSensor(anemometerScopedName[0]));
+    }
+
+    if (!this->dataPtr->windSensor)
+    {
+        if (anemometerScopedName.size() > 1)
+        {
+            gzwarn << "[" << this->dataPtr->modelName << "] "
+                << "first anemometer_sensor scoped name [" << anemometerScopedName[0]
+                << "] not found, trying the rest of the sensor names.\n";
+            for (unsigned k = 1; k < anemometerScopedName.size(); ++k)
+            {
+                this->dataPtr->windSensor = std::dynamic_pointer_cast<sensors::AnemometerSensor>
+                    (sensors::SensorManager::Instance()->GetSensor(anemometerScopedName[k]));
+                if (this->dataPtr->windSensor)
+                {
+                    gzwarn << "found [" << anemometerScopedName[k] << "]\n";
+                    break;
+                }
+            }
+        }
+
+        if (!this->dataPtr->windSensor)
+        {
+            gzwarn << "[" << this->dataPtr->modelName << "] "
+                << "anemometer_sensor scoped name [" << anemometerName
+                << "] not found, trying unscoped name.\n" << "\n";
+            // TODO: this fails for multi-nested models.
+            // TODO: and transforms fail for rotated nested model,
+            //       joints point the wrong way.
+            this->dataPtr->windSensor = std::dynamic_pointer_cast<sensors::AnemometerSensor>
+                (sensors::SensorManager::Instance()->GetSensor(anemometerName));
+        }
+
+        if (!this->dataPtr->windSensor)
+        {
+            gzerr << "[" << this->dataPtr->modelName << "] "
+                << "anemometer_sensor [" << anemometerName
+                << "] not found, abort ArduPilot plugin.\n" << "\n";
+            return;
+        }
+    }
+}
+
+/////////////////////////////////////////////////
+void ArduPilotPlugin::LoadGpsSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf)
+{
+  // the GPS is optional
+  if (!_sdf->HasElement("gpsName"))
+  {
+    return;
+  }
+
+  // Get GPS
+  std::string gpsName = _sdf->Get("gpsName", static_cast<std::string>("gps_sensor")).first;
+  std::vector<std::string> gpsScopedName = this->dataPtr->model->SensorScopedName(gpsName);
   if (gpsScopedName.size() > 1)
   {
     gzwarn << "[" << this->dataPtr->modelName << "] "
@@ -746,12 +899,21 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
              << "  found "  << " [" << gpsName << "].\n";
     }
   }
+}
+
+/////////////////////////////////////////////////
+void ArduPilotPlugin::LoadRaySensor(physics::ModelPtr _model, sdf::ElementPtr _sdf)
+{
+  // the range finder is optional
+  if (!_sdf->HasElement("rangefinderName"))
+  {
+    return;
+  }
 
   // Get Rangefinder
-  // TODO add sonar
   std::string rangefinderName = _sdf->Get("rangefinderName",
     static_cast<std::string>("rangefinder_sensor")).first;
-  std::vector<std::string> rangefinderScopedName = SensorScopedName(this->dataPtr->model, rangefinderName);
+  std::vector<std::string> rangefinderScopedName = this->dataPtr->model->SensorScopedName(rangefinderName);
   if (rangefinderScopedName.size() > 1)
   {
     gzwarn << "[" << this->dataPtr->modelName << "] "
@@ -811,27 +973,6 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
              << "  found "  << " [" << rangefinderName << "].\n";
     }
   }
-*/
-  // Controller time control.
-  this->dataPtr->lastControllerUpdateTime = 0;
-
-  // Initialise ardupilot sockets
-  if (!InitArduPilotSockets(_sdf))
-  {
-    return;
-  }
-
-  // Missed update count before we declare arduPilotOnline status false
-  this->dataPtr->connectionTimeoutMaxCount =
-    _sdf->Get("connectionTimeoutMaxCount", 10).first;
-
-  // Listen to the update event. This event is broadcast every simulation
-  // iteration.
-  this->dataPtr->updateConnection = event::Events::ConnectWorldUpdateBegin(
-      std::bind(&ArduPilotPlugin::OnUpdate, this));
-
-  gzlog << "[" << this->dataPtr->modelName << "] "
-        << "ArduPilot ready to fly. The force will be with you" << std::endl;
 }
 
 /////////////////////////////////////////////////
@@ -1219,5 +1360,45 @@ void ArduPilotPlugin::SendState() const
   // airspeed :     wind = Vector3(environment.wind.x, environment.wind.y, environment.wind.z)
    // pkt.airspeed = (pkt.velocity - wind).length()
 */
+
+  // Wind speed and direction
+  if (this->dataPtr->windSensor)
+  {
+    // apparent wind in the body frame
+    auto windVelBody = this->dataPtr->windSensor->ApparentWindVelocity();
+    
+    // sensor pose relative to the world frame
+    auto sensorPoseBody = this->dataPtr->windSensor->Pose();
+    auto parentName = this->dataPtr->windSensor->ParentName();
+    auto parentLink = this->dataPtr->model->GetLink(parentName);
+    auto parentPoseWorld = parentLink->WorldPose();
+    auto sensorPoseWorld = sensorPoseBody + parentPoseWorld;
+
+    // rotate from body to world frame
+    auto windVelWorld = sensorPoseWorld.Rot().RotateVector(windVelBody);
+
+    // rotate from Gazebo world from to NED frame
+    auto windVelNED = this->gazeboXYZToNED.Rot().RotateVectorReverse(windVelWorld);
+
+    // consider only xy-components and switch sign of direction
+    // (Gazebo specifies where wind is going to, AruPilot expects where wind is from)
+    double wind_x_ned = windVelNED.X() * -1.0;
+    double wind_y_ned = windVelNED.Y() * -1.0;
+    double wind_speed = sqrt(wind_x_ned * wind_x_ned + wind_y_ned * wind_y_ned);
+    double wind_direction = atan2(wind_y_ned, wind_x_ned);
+
+    pkt.bitmask |= fdmPacket::WIND_DIR;
+    pkt.bitmask |= fdmPacket::WIND_SPD;
+    pkt.wind_apparent.speed = static_cast<float>(wind_speed);
+    pkt.wind_apparent.direction = static_cast<float>(wind_direction);
+  } 
+  else
+  {
+    pkt.bitmask &= ~fdmPacket::WIND_DIR;
+    pkt.bitmask &= ~fdmPacket::WIND_SPD;
+    pkt.wind_apparent.speed = 0.0f;
+    pkt.wind_apparent.direction = 0.0f;
+  }
+
   this->dataPtr->socket_out.Send(&pkt, sizeof(pkt));
 }

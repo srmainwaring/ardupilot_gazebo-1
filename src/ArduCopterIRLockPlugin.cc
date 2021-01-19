@@ -45,9 +45,9 @@
 #include <gazebo/rendering/Camera.hh>
 #include <gazebo/rendering/Conversions.hh>
 #include <gazebo/rendering/Scene.hh>
-#include <include/SelectionBuffer.hh>
 
-#include "include/ArduCopterIRLockPlugin.hh"
+#include "SelectionBuffer.hh"
+#include "ArduCopterIRLockPlugin.hh"
 
 using namespace gazebo;
 GZ_REGISTER_SENSOR_PLUGIN(ArduCopterIRLockPlugin)

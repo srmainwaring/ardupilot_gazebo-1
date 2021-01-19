@@ -9,6 +9,9 @@ project(ardupilot_sitl_gazebo)
 #######################
 
 find_package(gazebo REQUIRED)
+find_package(Boost REQUIRED)
+find_package(Protobuf REQUIRED)
+
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 if("${GAZEBO_VERSION}" VERSION_LESS "8.0")
@@ -121,30 +124,77 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VALID_CXX_FLAGS} ${UNFILTERED_FLAGS}"
 ###########
 
 include_directories(
-        ${PROJECT_SOURCE_DIR}
-        include
-        ${GAZEBO_INCLUDE_DIRS}
-        )
+    include    
+    ${PROJECT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/msgs
+    ${Boost_INCLUDE_DIRS}
+    ${GAZEBO_INCLUDE_DIRS}
+    ${GAZEBO_PROTO_INCLUDE_DIRS}
+)
 
 link_libraries(
-        ${GAZEBO_LIBRARIES}
-        )
+    ${GAZEBO_LIBRARIES}
+)
 
 link_directories(
-        ${GAZEBO_LIBRARY_DIRS}
-        )
+    ${GAZEBO_LIBRARY_DIRS}
+)
+
+############################################################################### 
+# Messages...
+
+add_subdirectory(msgs)
 
 set (plugins_single_header
-        ArduPilotPlugin
-        ArduCopterIRLockPlugin
-        GimbalSmall2dPlugin
-        )
+    ArduPilotPlugin
+    ArduCopterIRLockPlugin
+    GimbalSmall2dPlugin
+)
 
+# AnemometerPlugin
+add_library(AnemometerPlugin
+    SHARED
+    src/AnemometerSensor.cc
+    src/Utilities.cc
+)
+target_link_libraries(AnemometerPlugin
+    AnemometerPluginMsgs
+    ${Boost_LIBRARIES}
+    ${GAZEBO_LIBRARIES}
+)
+add_dependencies(AnemometerPlugin
+    AnemometerPluginMsgs
+)
+
+# ArduPilotRegisterSensorsPlugin
+add_library(ArduPilotRegisterSensorsPlugin
+    SHARED
+    src/RegisterSensorsPlugin.cc
+)
+target_link_libraries(ArduPilotRegisterSensorsPlugin
+    AnemometerPlugin
+    AnemometerPluginMsgs
+    ${Boost_LIBRARIES}
+    ${GAZEBO_LIBRARIES}
+)
+add_dependencies(ArduPilotRegisterSensorsPlugin
+    AnemometerPlugin
+    AnemometerPluginMsgs
+)
+
+# ArduCopterIRLockPlugin
 add_library(ArduCopterIRLockPlugin SHARED src/ArduCopterIRLockPlugin.cc)
 target_link_libraries(ArduCopterIRLockPlugin ${GAZEBO_LIBRARIES})
 
+# ArduPilotPlugin
 add_library(ArduPilotPlugin SHARED src/ArduPilotPlugin.cc)
-target_link_libraries(ArduPilotPlugin ${GAZEBO_LIBRARIES})
+target_link_libraries(ArduPilotPlugin
+    AnemometerPlugin
+    ${GAZEBO_LIBRARIES}
+)
+add_dependencies(ArduPilotPlugin
+    AnemometerPlugin
+)
 
 if("${GAZEBO_VERSION}" VERSION_LESS "8.0")
     add_library(GimbalSmall2dPlugin SHARED src/GimbalSmall2dPlugin.cc)
@@ -152,6 +202,11 @@ if("${GAZEBO_VERSION}" VERSION_LESS "8.0")
     install(TARGETS GimbalSmall2dPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
 endif()
 
+############################################################################### 
+# Install
+
+install(TARGETS AnemometerPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
+install(TARGETS ArduPilotRegisterSensorsPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
 install(TARGETS ArduCopterIRLockPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
 install(TARGETS ArduPilotPlugin DESTINATION ${GAZEBO_PLUGIN_PATH})
 

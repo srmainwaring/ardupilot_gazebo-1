@@ -63,6 +63,18 @@ namespace gazebo
     // Documentation Inherited.
     public: virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
 
+    /// \brief Load an IMU sensor
+    private: void LoadImuSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+
+    /// \brief Load a wind sensor (anemometer)
+    private: void LoadWindSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+
+    /// \brief Load a GPS sensor
+    private: void LoadGpsSensor(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+
+    /// \brief Load a Ray sensor (range finder)
+    private: void LoadRaySensor(physics::ModelPtr _model, sdf::ElementPtr _sdf);
+
     /// \brief Update the control surfaces controllers.
     /// \param[in] _info Update information provided by the server.
     private: void OnUpdate();
