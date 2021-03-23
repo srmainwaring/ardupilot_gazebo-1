@@ -24,15 +24,22 @@
 #include <ignition/math/Filter.hh>
 #include <gazebo/common/Assert.hh>
 #include <gazebo/common/Plugin.hh>
+#include <gazebo/msgs/pid.pb.h>
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/sensors/sensors.hh>
 #include <gazebo/transport/transport.hh>
+
 #include "ArduPilotPlugin.hh"
 
 #include "Socket.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+
+// Enable additional debug info
+#define DEBUG_ARDUPILOT_GAZEBO 0
 
 // MAX_MOTORS limits the maximum number of <control> elements that
 // can be defined in the <plugin>.
@@ -118,12 +125,77 @@ class Control
   public: static double kDefaultRotorVelocitySlowdownSim;
   public: static double kDefaultFrequencyCutoff;
   public: static double kDefaultSamplingRate;
+
+  /// \brief The PID topic
+  public: std::string pidTopic;
+
+  /// \brief Subscribe to PID messages
+  public: transport::SubscriberPtr pidSub;
+
+  /// \brief Subscribe to PID updates
+  public: void SubscribePID(transport::NodePtr node);
+
+  /// \brief Update PIDs
+  public: void OnPID(ConstPIDPtr &_msg);
 };
 
 double Control::kDefaultRotorVelocitySlowdownSim = 10.0;
 double Control::kDefaultFrequencyCutoff = 5.0;
 double Control::kDefaultSamplingRate = 0.2;
 
+/////////////////////////////////////////////////
+void Control::SubscribePID(transport::NodePtr node)
+{
+    this->pidTopic = "~/" + this->jointName + "/pid";
+    boost::replace_all(this->pidTopic, "::", "/");
+    this->pidSub = node->Subscribe(this->pidTopic, &Control::OnPID, this);
+
+    gzdbg << "Subscribing to topic: " << this->pidTopic
+        <<  " for joint: " << this->jointName << "\n";
+}
+
+/////////////////////////////////////////////////
+void Control::OnPID(ConstPIDPtr &_msg)
+{
+    // Update PID values
+    if (_msg->has_p_gain())
+    {
+        this->pid.SetPGain(_msg->p_gain());
+    }
+    if (_msg->has_i_gain())
+    {
+        this->pid.SetIGain(_msg->i_gain());
+    }
+    if (_msg->has_d_gain())
+    {
+        this->pid.SetDGain(_msg->d_gain());
+    }
+    if (_msg->has_i_max())
+    {
+        this->pid.SetIMax(_msg->i_max());
+    }
+    if (_msg->has_i_min())
+    {
+        this->pid.SetIMin(_msg->i_min());
+    }
+    if (_msg->has_limit())
+    {
+        this->pid.SetCmdMax(_msg->limit());
+        this->pid.SetCmdMin(_msg->limit() * -1.0);
+    }
+
+    gzdbg << "Updated PIDs: \n"
+        << "topic:   " << this->pidTopic << "\n"
+        << "p_gain:  " << this->pid.GetPGain() << "\n"
+        << "i_gain:  " << this->pid.GetIGain() << "\n"
+        << "d_gain:  " << this->pid.GetDGain() << "\n"
+        << "i_max:   " << this->pid.GetIMax() << "\n"
+        << "i_min:   " << this->pid.GetIMin() << "\n"
+        << "cmd_max: " << this->pid.GetCmdMax() << "\n"
+        << "cmd_min: " << this->pid.GetCmdMin() << "\n";
+}
+
+/////////////////////////////////////////////////
 // Private data class
 class gazebo::ArduPilotPluginPrivate
 {
@@ -137,7 +209,7 @@ class gazebo::ArduPilotPluginPrivate
   public: std::string modelName;
 
   /// \brief Array of controllers
-  public: std::vector<Control> controls;
+  public: std::vector<std::shared_ptr<Control>> controls;
 
   /// \brief Keep track of controller update sim-time.
   public: gazebo::common::Time lastControllerUpdateTime = 0;
@@ -197,6 +269,8 @@ class gazebo::ArduPilotPluginPrivate
   /// \brief Last received frame count from the ArduPilot controller
   public: uint32_t fcu_frame_count = -1;
 
+  /// \brief Gazebo transport node for communication.
+  public: transport::NodePtr node;
 };
 
 /////////////////////////////////////////////////
@@ -239,6 +313,10 @@ void ArduPilotPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   {
     this->dataPtr->gazeboXYZToNED = _sdf->Get<ignition::math::Pose3d>("gazeboXYZToNED");
   }
+
+  // transport node
+  this->dataPtr->node = transport::NodePtr(new transport::Node());
+  this->dataPtr->node->Init(this->dataPtr->model->GetWorld()->Name());
 
   // Load control channel params
   this->LoadControlChannels(_sdf);
@@ -288,59 +366,59 @@ void ArduPilotPlugin::LoadControlChannels(sdf::ElementPtr _sdf)
 
   while (controlSDF)
   {
-    Control control;
+    auto control = std::shared_ptr<Control>(new Control());
 
     if (controlSDF->HasAttribute("channel"))
     {
-      control.channel =
+      control->channel =
         atoi(controlSDF->GetAttribute("channel")->GetAsString().c_str());
     }
     else if (controlSDF->HasAttribute("id"))
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
              <<  "please deprecate attribute id, use channel instead.\n";
-      control.channel =
+      control->channel =
         atoi(controlSDF->GetAttribute("id")->GetAsString().c_str());
     }
     else
     {
-      control.channel = this->dataPtr->controls.size();
+      control->channel = this->dataPtr->controls.size();
       gzwarn << "[" << this->dataPtr->modelName << "] "
              <<  "id/channel attribute not specified, use order parsed ["
-             << control.channel << "].\n";
+             << control->channel << "].\n";
     }
 
     if (controlSDF->HasElement("type"))
     {
-      control.type = controlSDF->Get<std::string>("type");
+      control->type = controlSDF->Get<std::string>("type");
     }
     else
     {
       gzerr << "[" << this->dataPtr->modelName << "] "
             <<  "Control type not specified,"
             << " using velocity control by default.\n";
-      control.type = "VELOCITY";
+      control->type = "VELOCITY";
     }
 
-    if (control.type != "VELOCITY" &&
-        control.type != "POSITION" &&
-        control.type != "EFFORT")
+    if (control->type != "VELOCITY" &&
+        control->type != "POSITION" &&
+        control->type != "EFFORT")
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
-             << "Control type [" << control.type
+             << "Control type [" << control->type
              << "] not recognized, must be one of VELOCITY, POSITION, EFFORT."
              << " default to VELOCITY.\n";
-      control.type = "VELOCITY";
+      control->type = "VELOCITY";
     }
 
     if (controlSDF->HasElement("useForce"))
     {
-      control.useForce = controlSDF->Get<bool>("useForce");
+      control->useForce = controlSDF->Get<bool>("useForce");
     }
 
     if (controlSDF->HasElement("jointName"))
     {
-      control.jointName = controlSDF->Get<std::string>("jointName");
+      control->jointName = controlSDF->Get<std::string>("jointName");
     }
     else
     {
@@ -350,19 +428,19 @@ void ArduPilotPlugin::LoadControlChannels(sdf::ElementPtr _sdf)
     }
 
     // Get the pointer to the joint.
-    control.joint = this->dataPtr->model->GetJoint(control.jointName);
-    if (control.joint == nullptr)
+    control->joint = this->dataPtr->model->GetJoint(control->jointName);
+    if (control->joint == nullptr)
     {
       gzerr << "[" << this->dataPtr->modelName << "] "
             << "Couldn't find specified joint ["
-            << control.jointName << "]. This plugin will not run.\n";
+            << control->jointName << "]. This plugin will not run.\n";
       return;
     }
 
     if (controlSDF->HasElement("multiplier"))
     {
       // overwrite turningDirection, deprecated.
-      control.multiplier = controlSDF->Get<double>("multiplier");
+      control->multiplier = controlSDF->Get<double>("multiplier");
     }
     else if (controlSDF->HasElement("turningDirection"))
     {
@@ -374,86 +452,86 @@ void ArduPilotPlugin::LoadControlChannels(sdf::ElementPtr _sdf)
       // special cases mimic from controls_gazebo_plugins
       if (turningDirection == "cw")
       {
-        control.multiplier = -1;
+        control->multiplier = -1;
       }
       else if (turningDirection == "ccw")
       {
-        control.multiplier = 1;
+        control->multiplier = 1;
       }
       else
       {
         gzdbg << "[" << this->dataPtr->modelName << "] "
               << "not string, check turningDirection as float\n";
-        control.multiplier = controlSDF->Get<double>("turningDirection");
+        control->multiplier = controlSDF->Get<double>("turningDirection");
       }
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <multiplier> (or deprecated <turningDirection>) not specified, "
-            << " default to " << control.multiplier
+            << " default to " << control->multiplier
             << " (or deprecated <turningDirection> 'ccw').\n";
     }
 
     if (controlSDF->HasElement("offset"))
     {
-      control.offset = controlSDF->Get<double>("offset");
+      control->offset = controlSDF->Get<double>("offset");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <offset> not specified, default to "
-            << control.offset << "\n";
+            << control->offset << "\n";
     }
 
     if (controlSDF->HasElement("servo_min"))
     {
-      control.servo_min = controlSDF->Get<double>("servo_min");
+      control->servo_min = controlSDF->Get<double>("servo_min");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <servo_min> not specified, default to "
-            << control.servo_min << "\n";
+            << control->servo_min << "\n";
     }
 
     if (controlSDF->HasElement("servo_max"))
     {
-      control.servo_max = controlSDF->Get<double>("servo_max");
+      control->servo_max = controlSDF->Get<double>("servo_max");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <servo_max> not specified, default to "
-            << control.servo_max << "\n";
+            << control->servo_max << "\n";
     }
 
-    control.rotorVelocitySlowdownSim =
+    control->rotorVelocitySlowdownSim =
         controlSDF->Get("rotorVelocitySlowdownSim", 1).first;
 
-    if (ignition::math::equal(control.rotorVelocitySlowdownSim, 0.0))
+    if (ignition::math::equal(control->rotorVelocitySlowdownSim, 0.0))
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
-             << "control for joint [" << control.jointName
+             << "control for joint [" << control->jointName
              << "] rotorVelocitySlowdownSim is zero,"
              << " assume no slowdown.\n";
-      control.rotorVelocitySlowdownSim = 1.0;
+      control->rotorVelocitySlowdownSim = 1.0;
     }
 
-    control.frequencyCutoff =
-          controlSDF->Get("frequencyCutoff", control.frequencyCutoff).first;
-    control.samplingRate =
-          controlSDF->Get("samplingRate", control.samplingRate).first;
+    control->frequencyCutoff =
+          controlSDF->Get("frequencyCutoff", control->frequencyCutoff).first;
+    control->samplingRate =
+          controlSDF->Get("samplingRate", control->samplingRate).first;
 
     // use gazebo::math::Filter
-    control.filter.Fc(control.frequencyCutoff, control.samplingRate);
+    control->filter.Fc(control->frequencyCutoff, control->samplingRate);
 
     // initialize filter to zero value
-    control.filter.Set(0.0);
+    control->filter.Set(0.0);
 
     // note to use this filter, do
     // stateFiltered = filter.Process(stateRaw);
@@ -461,51 +539,54 @@ void ArduPilotPlugin::LoadControlChannels(sdf::ElementPtr _sdf)
     // Overload the PID parameters if they are available.
     double param;
     // carry over from ArduCopter plugin
-    param = controlSDF->Get("vel_p_gain", control.pid.GetPGain()).first;
-    control.pid.SetPGain(param);
+    param = controlSDF->Get("vel_p_gain", control->pid.GetPGain()).first;
+    control->pid.SetPGain(param);
 
-    param = controlSDF->Get("vel_i_gain", control.pid.GetIGain()).first;
-    control.pid.SetIGain(param);
+    param = controlSDF->Get("vel_i_gain", control->pid.GetIGain()).first;
+    control->pid.SetIGain(param);
 
-    param = controlSDF->Get("vel_d_gain", control.pid.GetDGain()).first;
-    control.pid.SetDGain(param);
+    param = controlSDF->Get("vel_d_gain", control->pid.GetDGain()).first;
+    control->pid.SetDGain(param);
 
-    param = controlSDF->Get("vel_i_max", control.pid.GetIMax()).first;
-    control.pid.SetIMax(param);
+    param = controlSDF->Get("vel_i_max", control->pid.GetIMax()).first;
+    control->pid.SetIMax(param);
 
-    param = controlSDF->Get("vel_i_min", control.pid.GetIMin()).first;
-    control.pid.SetIMin(param);
+    param = controlSDF->Get("vel_i_min", control->pid.GetIMin()).first;
+    control->pid.SetIMin(param);
 
-    param = controlSDF->Get("vel_cmd_max", control.pid.GetCmdMax()).first;
-    control.pid.SetCmdMax(param);
+    param = controlSDF->Get("vel_cmd_max", control->pid.GetCmdMax()).first;
+    control->pid.SetCmdMax(param);
 
-    param = controlSDF->Get("vel_cmd_min", control.pid.GetCmdMin()).first;
-    control.pid.SetCmdMin(param);
+    param = controlSDF->Get("vel_cmd_min", control->pid.GetCmdMin()).first;
+    control->pid.SetCmdMin(param);
 
     // new params, overwrite old params if exist
-    param = controlSDF->Get("p_gain", control.pid.GetPGain()).first;
-    control.pid.SetPGain(param);
+    param = controlSDF->Get("p_gain", control->pid.GetPGain()).first;
+    control->pid.SetPGain(param);
 
-    param = controlSDF->Get("i_gain", control.pid.GetIGain()).first;
-    control.pid.SetIGain(param);
+    param = controlSDF->Get("i_gain", control->pid.GetIGain()).first;
+    control->pid.SetIGain(param);
 
-    param = controlSDF->Get("d_gain", control.pid.GetDGain()).first;
-    control.pid.SetDGain(param);
+    param = controlSDF->Get("d_gain", control->pid.GetDGain()).first;
+    control->pid.SetDGain(param);
 
-    param = controlSDF->Get("i_max", control.pid.GetIMax()).first;
-    control.pid.SetIMax(param);
+    param = controlSDF->Get("i_max", control->pid.GetIMax()).first;
+    control->pid.SetIMax(param);
 
-    param = controlSDF->Get("i_min", control.pid.GetIMin()).first;
-    control.pid.SetIMin(param);
+    param = controlSDF->Get("i_min", control->pid.GetIMin()).first;
+    control->pid.SetIMin(param);
 
-    param = controlSDF->Get("cmd_max", control.pid.GetCmdMax()).first;
-    control.pid.SetCmdMax(param);
+    param = controlSDF->Get("cmd_max", control->pid.GetCmdMax()).first;
+    control->pid.SetCmdMax(param);
 
-    param = controlSDF->Get("cmd_min", control.pid.GetCmdMin()).first;
-    control.pid.SetCmdMin(param);
+    param = controlSDF->Get("cmd_min", control->pid.GetCmdMin()).first;
+    control->pid.SetCmdMin(param);
 
-    // set pid initial command
-    control.pid.SetCmd(0.0);
+    // set PID initial command
+    control->pid.SetCmd(0.0);
+
+    // subscribe to PID updates
+    control->SubscribePID(this->dataPtr->node);
 
     this->dataPtr->controls.push_back(control);
     controlSDF = controlSDF->GetNextElement("control");
@@ -735,7 +816,7 @@ void ArduPilotPlugin::OnUpdate()
         this->dataPtr->lastServoPacketRecvTime = curTime;
 
         // debug: synchonisation checks
-#if 0
+#if DEBUG_ARDUPILOT_GAZEBO
         gzdbg << "fdm_frame_rate: " << 1/dt
           << ", fcu_frame_rate: " << this->dataPtr->fcu_frame_rate
           << "\n";
@@ -759,8 +840,8 @@ void ArduPilotPlugin::ResetPIDs()
   // Reset velocity PID for controls
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
   {
-    this->dataPtr->controls[i].cmd = 0;
-    // this->dataPtr->controls[i].pid.Reset();
+    this->dataPtr->controls[i]->cmd = 0;
+    // this->dataPtr->controls[i]->pid.Reset();
   }
 }
 
@@ -808,29 +889,29 @@ void ArduPilotPlugin::ApplyMotorForces(const double _dt)
   // update velocity PID for controls and apply force to joint
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
   {
-    if (this->dataPtr->controls[i].useForce)
+    if (this->dataPtr->controls[i]->useForce)
     {
-      if (this->dataPtr->controls[i].type == "VELOCITY")
+      if (this->dataPtr->controls[i]->type == "VELOCITY")
       {
-        const double velTarget = this->dataPtr->controls[i].cmd /
-          this->dataPtr->controls[i].rotorVelocitySlowdownSim;
-        const double vel = this->dataPtr->controls[i].joint->GetVelocity(0);
+        const double velTarget = this->dataPtr->controls[i]->cmd /
+          this->dataPtr->controls[i]->rotorVelocitySlowdownSim;
+        const double vel = this->dataPtr->controls[i]->joint->GetVelocity(0);
         const double error = vel - velTarget;
-        const double force = this->dataPtr->controls[i].pid.Update(error, _dt);
-        this->dataPtr->controls[i].joint->SetForce(0, force);
+        const double force = this->dataPtr->controls[i]->pid.Update(error, _dt);
+        this->dataPtr->controls[i]->joint->SetForce(0, force);
       }
-      else if (this->dataPtr->controls[i].type == "POSITION")
+      else if (this->dataPtr->controls[i]->type == "POSITION")
       {
-        const double posTarget = this->dataPtr->controls[i].cmd;
-        const double pos = this->dataPtr->controls[i].joint->Position();
+        const double posTarget = this->dataPtr->controls[i]->cmd;
+        const double pos = this->dataPtr->controls[i]->joint->Position();
         const double error = pos - posTarget;
-        const double force = this->dataPtr->controls[i].pid.Update(error, _dt);
-        this->dataPtr->controls[i].joint->SetForce(0, force);
+        const double force = this->dataPtr->controls[i]->pid.Update(error, _dt);
+        this->dataPtr->controls[i]->joint->SetForce(0, force);
       }
-      else if (this->dataPtr->controls[i].type == "EFFORT")
+      else if (this->dataPtr->controls[i]->type == "EFFORT")
       {
-        const double force = this->dataPtr->controls[i].cmd;
-        this->dataPtr->controls[i].joint->SetForce(0, force);
+        const double force = this->dataPtr->controls[i]->cmd;
+        this->dataPtr->controls[i]->joint->SetForce(0, force);
       }
       else
       {
@@ -839,18 +920,18 @@ void ArduPilotPlugin::ApplyMotorForces(const double _dt)
     }
     else
     {
-      if (this->dataPtr->controls[i].type == "VELOCITY")
+      if (this->dataPtr->controls[i]->type == "VELOCITY")
       {
-        this->dataPtr->controls[i].joint->SetVelocity(0, this->dataPtr->controls[i].cmd);
+        this->dataPtr->controls[i]->joint->SetVelocity(0, this->dataPtr->controls[i]->cmd);
       }
-      else if (this->dataPtr->controls[i].type == "POSITION")
+      else if (this->dataPtr->controls[i]->type == "POSITION")
       {
-        this->dataPtr->controls[i].joint->SetPosition(0, this->dataPtr->controls[i].cmd);
+        this->dataPtr->controls[i]->joint->SetPosition(0, this->dataPtr->controls[i]->cmd);
       }
-      else if (this->dataPtr->controls[i].type == "EFFORT")
+      else if (this->dataPtr->controls[i]->type == "EFFORT")
       {
-        const double force = this->dataPtr->controls[i].cmd;
-        this->dataPtr->controls[i].joint->SetForce(0, force);
+        const double force = this->dataPtr->controls[i]->cmd;
+        this->dataPtr->controls[i]->joint->SetForce(0, force);
       }
       else
       {
@@ -929,7 +1010,7 @@ bool ArduPilotPlugin::ReceiveServoPacket()
         return false;
     }
 
-#if 0
+#if DEBUG_ARDUPILOT_GAZEBO
     // debug: inspect sitl packet
     std::ostringstream oss;
     oss << "recv " << recvSize << " bytes from "
@@ -996,29 +1077,29 @@ bool ArduPilotPlugin::ReceiveServoPacket()
         // enforce limit on the number of <control> elements
         if (i < MAX_MOTORS)
         {
-            if (this->dataPtr->controls[i].channel < MAX_SERVO_CHANNELS)
+            if (this->dataPtr->controls[i]->channel < MAX_SERVO_CHANNELS)
             {
                 // convert pwm to raw cmd: [servo_min, servo_max] => [0, 1],
                 // default is: [1000, 2000] => [0, 1]
-                const double pwm = pkt.pwm[this->dataPtr->controls[i].channel];
-                const double pwm_min = this->dataPtr->controls[i].servo_min;
-                const double pwm_max = this->dataPtr->controls[i].servo_max;
-                const double multiplier = this->dataPtr->controls[i].multiplier;
-                const double offset = this->dataPtr->controls[i].offset;
+                const double pwm = pkt.pwm[this->dataPtr->controls[i]->channel];
+                const double pwm_min = this->dataPtr->controls[i]->servo_min;
+                const double pwm_max = this->dataPtr->controls[i]->servo_max;
+                const double multiplier = this->dataPtr->controls[i]->multiplier;
+                const double offset = this->dataPtr->controls[i]->offset;
 
                 // bound incoming cmd between 0 and 1
                 double raw_cmd = (pwm - pwm_min)/(pwm_max - pwm_min);
                 raw_cmd = ignition::math::clamp(raw_cmd, 0.0, 1.0);
-                this->dataPtr->controls[i].cmd = multiplier * (raw_cmd + offset);
+                this->dataPtr->controls[i]->cmd = multiplier * (raw_cmd + offset);
 
-#if 0
-                gzdbg << "apply input chan[" << this->dataPtr->controls[i].channel
+#if DEBUG_ARDUPILOT_GAZEBO
+                gzdbg << "apply input chan[" << this->dataPtr->controls[i]->channel
                     << "] to control chan[" << i
                     << "] with joint name ["
-                    << this->dataPtr->controls[i].jointName
+                    << this->dataPtr->controls[i]->jointName
                     << "] pwm [" << pwm
                     << "] raw cmd [" << raw_cmd
-                    << "] adjusted cmd [" << this->dataPtr->controls[i].cmd
+                    << "] adjusted cmd [" << this->dataPtr->controls[i]->cmd
                     << "].\n";
 #endif
             }
@@ -1026,7 +1107,7 @@ bool ArduPilotPlugin::ReceiveServoPacket()
             {
                 gzerr << "[" << this->dataPtr->modelName << "] "
                     << "control[" << i << "] channel ["
-                    << this->dataPtr->controls[i].channel
+                    << this->dataPtr->controls[i]->channel
                     << "] is greater than the number of servo channels ["
                     << MAX_SERVO_CHANNELS
                     << "], control not applied.\n";
