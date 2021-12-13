@@ -175,6 +175,9 @@ class GZ_SIM_VISIBLE ArduPilotPlugin:
   /// \brief Initialise flight dynamics model socket
   private: bool InitSockets(sdf::ElementPtr _sdf) const;
 
+  /// \brief Publish PID data
+  private: void PublishPids() const;
+
   /// \brief Private data pointer.
   private: std::unique_ptr<ArduPilotPluginPrivate> dataPtr;
 };

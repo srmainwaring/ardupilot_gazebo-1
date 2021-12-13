@@ -29,9 +29,11 @@
 
 #include <gz/common/SignalHandler.hh>
 #include <gz/msgs/Utility.hh>
+#include <gz/sim/components/ChildLinkName.hh>
 #include <gz/sim/components/CustomSensor.hh>
 #include <gz/sim/components/Imu.hh>
 #include <gz/sim/components/Joint.hh>
+#include <gz/sim/components/JointAxis.hh>
 #include <gz/sim/components/JointForceCmd.hh>
 #include <gz/sim/components/JointPosition.hh>
 #include <gz/sim/components/JointVelocity.hh>
@@ -39,9 +41,11 @@
 #include <gz/sim/components/LinearVelocity.hh>
 #include <gz/sim/components/Link.hh>
 #include <gz/sim/components/Name.hh>
+#include <gz/sim/components/ParentLinkName.hh>
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/Sensor.hh>
 #include <gz/sim/components/World.hh>
+#include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
 #include <gz/sim/World.hh>
 #include <gz/sim/Util.hh>
@@ -86,7 +90,11 @@ class Control
     this->frequencyCutoff = this->kDefaultFrequencyCutoff;
     this->samplingRate = this->kDefaultSamplingRate;
 
-    this->pid.Init(0.1, 0, 0, 0, 0, 1.0, -1.0);
+    // Initialise PID controller
+    this->pid.Init();
+    this->pid.SetPGain(0.1);
+    this->pid.SetCmdMax(1.0);
+    this->pid.SetCmdMin(-1.0);
   }
 
   public: ~Control() {}
@@ -149,9 +157,25 @@ class Control
   public: static double kDefaultRotorVelocitySlowdownSim;
   public: static double kDefaultFrequencyCutoff;
   public: static double kDefaultSamplingRate;
+
+  // direct force-torque action
+  public: double motorSpin  = 1.0;
+  public: double motorKTau = 0.0;
+
+  // publishers (debugging)
+  public: double pidAct = 0.0;
+  public: double pidTgt = 0.0;
+  public: gz::transport::Node::Publisher motorTorquePub;
+  public: gz::transport::Node::Publisher pidTgtPub;
+  public: gz::transport::Node::Publisher pidActPub;
+  public: gz::transport::Node::Publisher pidErrPub;
+  public: gz::transport::Node::Publisher pidCmdPub;
+  public: gz::transport::Node::Publisher pidPErPub;
+  public: gz::transport::Node::Publisher pidIErPub;
+  public: gz::transport::Node::Publisher pidDErPub;
 };
 
-double Control::kDefaultRotorVelocitySlowdownSim = 10.0;
+double Control::kDefaultRotorVelocitySlowdownSim = 1.0;
 double Control::kDefaultFrequencyCutoff = 5.0;
 double Control::kDefaultSamplingRate = 0.2;
 
@@ -209,6 +233,10 @@ class gz::sim::systems::ArduPilotPluginPrivate
 
   /// \brief keep track of controller update sim-time.
   public: std::chrono::steady_clock::duration lastControllerUpdateTime{0};
+
+  /// \brief keep track of publishing PID info.
+  public: std::chrono::steady_clock::duration lastPidPublishUpdateTime{0};
+  public: std::chrono::milliseconds pidPublishUpdateMillis{100};
 
   /// \brief Keep track of the time the last servo packet was received.
   public: std::chrono::steady_clock::duration lastServoPacketRecvTime{0};
@@ -574,12 +602,13 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
     if (control.type != "VELOCITY" &&
         control.type != "POSITION" &&
         control.type != "EFFORT" &&
+        control.type != "FORCE" &&
         control.type != "COMMAND")
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
              << "Control type [" << control.type
-             << "] not recognized, must be one of"
-             << "VELOCITY, POSITION, EFFORT, COMMAND."
+             << "] not recognized, must be one of "
+             << "VELOCITY, POSITION, EFFORT, FORCE, COMMAND."
              << " default to VELOCITY.\n";
       control.type = "VELOCITY";
     }
@@ -780,6 +809,93 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
 
     param = controlSDF->Get("cmd_min", control.pid.CmdMin()).first;
     control.pid.SetCmdMin(param);
+
+    // direct force-torque
+    bool publish = true;
+    if (publish)
+    {
+      // Throttle publishing debug data @ 10Hz
+      transport::AdvertiseMessageOptions options;
+      options.SetMsgsPerSec(10);
+
+      control.motorSpin =
+            controlSDF->Get("motor_spin", control.motorSpin).first;
+      control.motorKTau =
+            controlSDF->Get("motor_k_tau", control.motorKTau).first;
+
+      // advertise topics
+      std::string motorTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/motor_torque");
+
+      control.motorTorquePub =
+          this->dataPtr->node.Advertise<gz::msgs::Float_V>(
+              motorTopic, options);
+
+      std::string pidTgtTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/tgt");
+
+      std::string pidActTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/act");
+
+      std::string pidErrTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/err");
+
+      std::string pidCmdTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/cmd");
+
+      std::string pidPErTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/per");
+
+      std::string pidIErTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/ier");
+
+      std::string pidDErTopic = gz::transport::TopicUtils::AsValidTopic(
+        "/model/" + this->dataPtr->modelName
+        + "/joint/" + control.jointName
+        + "/pid/der");
+
+      control.pidTgtPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidTgtTopic, options);
+
+      control.pidActPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidActTopic, options);
+
+      control.pidErrPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidErrTopic, options);
+
+      control.pidCmdPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidCmdTopic, options);
+
+      control.pidPErPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidPErTopic, options);
+
+      control.pidIErPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidIErTopic, options);
+
+      control.pidDErPub =
+          this->dataPtr->node.Advertise<gz::msgs::Float>(
+              pidDErTopic, options);
+    }
 
     // set pid initial command
     control.pid.SetCmd(0.0);
@@ -1235,6 +1351,22 @@ void gz::sim::systems::ArduPilotPlugin::PostUpdate(
         this->SendState();
         this->dataPtr->lastControllerUpdateTime = _info.simTime;
     }
+
+    // Publish messages
+    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+      _info.simTime - this->dataPtr->lastPidPublishUpdateTime);  //  .count();
+    if (!_info.paused &&
+        diff > this->dataPtr->pidPublishUpdateMillis &&
+        this->dataPtr->arduPilotOnline)
+    {
+        // gzdbg
+        //   << "["
+        //   << std::chrono::duration_cast<std::chrono::milliseconds>(
+        //       _info.simTime).count()
+        //   << "] Publishing PIDs\n";
+        this->PublishPids();
+        this->dataPtr->lastPidPublishUpdateTime = _info.simTime;
+    }
 }
 
 /////////////////////////////////////////////////
@@ -1367,6 +1499,94 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
       {
         const double force = this->dataPtr->controls[i].cmd;
         jfcComp->Data()[0] = force;
+      }
+      else if (this->dataPtr->controls[i].type == "FORCE")
+      {
+        // Joint properties
+        const auto jointEntity = this->dataPtr->controls[i].joint;
+
+        const auto jointAxis =
+            _ecm.Component<gz::sim::components::JointAxis>(
+                jointEntity)->Data().Xyz();
+
+        // Note: the joint pose is relative to the child link
+        const auto jointPose =
+            _ecm.Component<components::Pose>(
+                jointEntity)->Data();
+
+        // Parent link
+        const auto parentLinkName =
+            _ecm.Component<gz::sim::components::ParentLinkName>(
+                jointEntity);
+
+        const auto parentLinkEntity =
+            this->dataPtr->model.LinkByName(_ecm, parentLinkName->Data());
+
+        const auto parentLinkPose =
+            _ecm.Component<components::Pose>(
+                parentLinkEntity)->Data();
+
+        const auto parentLinkWorldPose = worldPose(parentLinkEntity, _ecm);
+
+        gz::sim::Link parentLink(parentLinkEntity);
+
+        // Child link
+        const auto childLinkName =
+            _ecm.Component<gz::sim::components::ChildLinkName>(
+                jointEntity);
+
+        const auto childLinkEntity =
+            this->dataPtr->model.LinkByName(_ecm, childLinkName->Data());
+
+        const auto childLinkPose =
+            _ecm.Component<components::Pose>(
+                childLinkEntity)->Data();
+
+        const auto childLinkWorldPose = worldPose(childLinkEntity, _ecm);
+
+        gz::sim::Link childLink(childLinkEntity);
+
+        // World pose
+        const auto jointWorldPose = childLinkWorldPose * jointPose;
+
+        const auto jointAxisWorldUnit =
+            jointWorldPose.Rot().RotateVector(jointAxis).Normalize();
+
+        // Position vector from parent to joint
+        const auto parentToJointWorldPos =
+            jointWorldPose.Pos() - parentLinkWorldPose.Pos();
+
+        // Torque for unit force
+        const auto torqueWorldUnitForce =
+            parentToJointWorldPos.Cross(jointAxisWorldUnit);
+
+        const double force = this->dataPtr->controls[i].cmd;
+        const auto forceWorld = force * jointAxisWorldUnit;
+        const auto torqueWorld = force * torqueWorldUnitForce;
+
+        // Reaction torque from the motor
+        const double spin = this->dataPtr->controls[i].motorSpin;
+        const double kTau = this->dataPtr->controls[i].motorKTau;
+        const auto motorTorqueWorld = -1.0 * spin * kTau * forceWorld;
+
+        // gzmsg << "[" << i << "] motor_torque_world: "
+        //     << motorTorqueWorld
+        //     << (i + 1 == this->dataPtr->controls.size() ? "\n\n" : "\n");
+
+        parentLink.AddWorldWrench(
+          _ecm, forceWorld, torqueWorld + motorTorqueWorld);
+
+        // Publish force and torque messages
+        bool publish = false;
+        if (publish)
+        {
+          gz::msgs::Float_V msg;
+          msg.add_data(force);
+          msg.add_data(-1.0 * spin * kTau * force);
+          msg.add_data(spin);
+          msg.add_data(kTau);
+          this->dataPtr->controls[i].motorTorquePub.Publish(msg);
+        }
       }
       else
       {
@@ -1998,3 +2218,136 @@ void gz::sim::systems::ArduPilotPlugin::SendState() const
         << "frame_count: " << this->dataPtr->fcu_frame_count << "\n";
 #endif
 }
+
+/////////////////////////////////////////////////
+void gz::sim::systems::ArduPilotPlugin::PublishPids() const
+{
+  for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
+  {
+    const double act = this->dataPtr->controls[i].pidAct;
+    const double tgt = this->dataPtr->controls[i].pidTgt;
+    const double err = act - tgt;
+    const double cmd = this->dataPtr->controls[i].pid.Cmd();
+
+    double pe, ie, de;
+    this->dataPtr->controls[i].pid.Errors(pe, ie, de);
+    {
+      gz::msgs::Float msg;
+      msg.set_data(act);
+      this->dataPtr->controls[i].pidActPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(tgt);
+      this->dataPtr->controls[i].pidTgtPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(this->dataPtr->controls[i].pidAct);
+      msg.set_data(err);
+      this->dataPtr->controls[i].pidErrPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(cmd);
+      this->dataPtr->controls[i].pidCmdPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(pe);
+      this->dataPtr->controls[i].pidPErPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(de);
+      this->dataPtr->controls[i].pidDErPub.Publish(msg);
+    }
+    {
+      gz::msgs::Float msg;
+      msg.set_data(ie);
+      this->dataPtr->controls[i].pidIErPub.Publish(msg);
+    }
+  }
+}
+
+/////////////////////////////////////////////////
+// void DebugLinksAndJoints(
+//     const Control& control,
+//     const gz::sim::EntityComponentManager &_ecm) const
+// {
+//   // Joint properties
+//   auto jointEntity = control.joint;
+//
+//   auto jointAxis =
+//       _ecm.Component<gz::sim::components::JointAxis>(
+//           jointEntity)->Data().Xyz();
+//
+//   // Note: the joint pose is relative to the child link
+//   auto jointPose =
+//       _ecm.Component<components::Pose>(
+//           jointEntity)->Data();
+//
+//   // Parent link
+//   auto parentLinkName =
+//       _ecm.Component<gz::sim::components::ParentLinkName>(
+//           jointEntity);
+//
+//   auto parentLinkEntity =
+//       this->dataPtr->model.LinkByName(_ecm, parentLinkName->Data());
+//
+//   auto parentLinkPose =
+//       _ecm.Component<components::Pose>(
+//           parentLinkEntity)->Data();
+//
+//   const auto parentLinkWorldPose = worldPose(parentLinkEntity, _ecm);
+//
+//   gz::sim::Link parentLink(parentLinkEntity);
+//
+//   // Child link
+//   auto childLinkName =
+//       _ecm.Component<gz::sim::components::ChildLinkName>(
+//           jointEntity);
+//
+//   auto childLinkEntity =
+//       this->dataPtr->model.LinkByName(_ecm, childLinkName->Data());
+//
+//   auto childLinkPose =
+//       _ecm.Component<components::Pose>(
+//           childLinkEntity)->Data();
+//
+//   const auto childLinkWorldPose = worldPose(childLinkEntity, _ecm);
+//
+//   gz::sim::Link childLink(childLinkEntity);
+//
+//   // World pose
+//   auto jointWorldPose = childLinkWorldPose * jointPose;
+//
+//   auto jointAxisWorldUnit =
+//       jointWorldPose.Rot().RotateVector(jointAxis).Normalize();
+//
+//   // Position vector from parent to joint
+//   auto parentToJointWorldPos =
+//      jointWorldPose.Pos() - parentLinkWorldPose.Pos();
+//
+//   // Torque for unit force
+//   auto torqueWorldUnitForce =
+//      parentToJointWorldPos.Cross(jointAxisWorldUnit);
+//
+//   gzmsg << "joint_axis:              " <<  jointAxis << "\n";
+//   gzmsg << "joint_pose:              " <<  jointPose << "\n";
+//   gzmsg << "joint_world_pose:        " <<  jointWorldPose << "\n";
+//   gzmsg << "joint_axis_world_unit:   " <<  jointAxisWorldUnit << "\n";
+//   gzmsg << "parent_joint_world_pos:  " <<  parentToJointWorldPos << "\n";
+//
+//   gzmsg << "parent_link_name:        " <<  parentLink.Name(_ecm).value()
+//                                         << "\n";
+//   gzmsg << "parent_link_pose:        " <<  parentLinkPose << "\n";
+//   gzmsg << "parent_link_world_pose:  " <<  parentLinkWorldPose << "\n";
+//
+//   gzmsg << "child_link_name:         " <<  childLink.Name(_ecm).value()
+//                                         << "\n";
+//   gzmsg << "child_link_pose:         " <<  childLinkPose << "\n";
+//   gzmsg << "child_link_world_pose:   " <<  childLinkWorldPose << "\n";
+//
+//   gzmsg << "torque_world_unit_force: " <<  torqueWorldUnitForce << "\n";
+// }
