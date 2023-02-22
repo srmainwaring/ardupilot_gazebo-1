@@ -638,6 +638,12 @@
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_0</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade1</label>
+        <topic>/model/iris_with_standoffs/link/rotor_0/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -655,6 +661,12 @@
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_0</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade2</label>
+        <topic>/model/iris_with_standoffs/link/rotor_0/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -673,6 +685,12 @@
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_1</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade1</label>
+        <topic>/model/iris_with_standoffs/link/rotor_1/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -690,6 +708,12 @@
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_1</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade2</label>
+        <topic>/model/iris_with_standoffs/link/rotor_1/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -708,6 +732,12 @@
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_2</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade1</label>
+        <topic>/model/iris_with_standoffs/link/rotor_2/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -725,6 +755,12 @@
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_2</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade2</label>
+        <topic>/model/iris_with_standoffs/link/rotor_2/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -743,6 +779,12 @@
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_3</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade1</label>
+        <topic>/model/iris_with_standoffs/link/rotor_3/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -760,6 +802,12 @@
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>iris_with_standoffs::rotor_3</link_name>
+      <visualize_forces>
+        <visualize>1</visualize>
+        <update_rate>60</update_rate>
+        <label>Blade2</label>
+        <topic>/model/iris_with_standoffs/link/rotor_3/forces/lift_drag</topic>
+      </visualize_forces>
     </plugin>
 
     <plugin filename="gz-sim-apply-joint-force-system"
