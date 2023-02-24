@@ -148,6 +148,20 @@ class Control
   /// \brief PID service callback
   public: bool OnPID(const gz::msgs::PID &_req, gz::msgs::PID &_rep);
 
+  /// \brief PID controller actual value
+  public: double pidAct{0.0};
+
+  /// \brief PID controller target value
+  public: double pidTgt{0.0};
+
+  /// \brief Topic name for publishing PIDs
+  public: std::string pidTopic;
+
+  /// \brief PID publisher
+  public: gz::transport::Node::Publisher pidPub;
+  
+  public: void PublishPID();
+
   /// \brief unused coefficients
   public: double rotorVelocitySlowdownSim;
   public: double frequencyCutoff;
@@ -211,6 +225,77 @@ bool Control::OnPID(const gz::msgs::PID &_req, gz::msgs::PID &_rep)
         << "cmd_min: " << this->pid.CmdMin() << "\n";
 
   return true;
+}
+
+/////////////////////////////////////////////////
+void Control::PublishPID()
+{
+  // Retrieve PID status
+  double tgt = this->pidTgt;
+  double act = this->pidAct;
+  double err = act - tgt;
+  double cmd = this->pid.Cmd();
+  double per(0.0);
+  double ier(0.0);
+  double der(0.0);
+  this->pid.Errors(per, ier, der);
+
+  gz::msgs::Param msg;
+
+  // Set tgt
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(tgt);
+    (*msg.mutable_params())["tgt"] = value;
+  }
+  // Set act
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(act);
+    (*msg.mutable_params())["act"] = value;
+  }
+  // Set err
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(err);
+    (*msg.mutable_params())["err"] = value;
+  }
+  // Set cmd
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(cmd);
+    (*msg.mutable_params())["cmd"] = value;
+  }
+  // Set per
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(per);
+    (*msg.mutable_params())["per"] = value;
+  }
+  // Set ier
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(ier);
+    (*msg.mutable_params())["ier"] = value;
+  }
+  // Set der
+  {
+    gz::msgs::Any value;
+    value.set_type(value.DOUBLE);
+    value.set_double_value(der);
+    (*msg.mutable_params())["der"] = value;
+  }
+
+  pidPub.Publish(msg);
+
+  /// \todo(srmainwaring) disable
+  // gzdbg << msg.DebugString() << "n";
 }
 
 /////////////////////////////////////////////////
@@ -428,7 +513,26 @@ class gz::sim::systems::ArduPilotPluginPrivate
       gzdbg << "Plugin received signal[" << _sig  << "]\n";
       this->signal = _sig;
   }
+
+  /// \brief Publish period calculated from <publish_rate>
+  public: std::chrono::steady_clock::duration pubPeriod{0};
+
+  /// \brief Last publish time
+  public: std::chrono::steady_clock::duration lastPubTime{0};
+
+  /// \brief Publish PID state
+  public: void PublishPIDs();
 };
+
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+void gz::sim::systems::ArduPilotPluginPrivate::PublishPIDs()
+{
+  for (auto& control : this->controls)
+  {
+    control->PublishPID();
+  }
+}
 
 /////////////////////////////////////////////////
 gz::sim::systems::ArduPilotPlugin::ArduPilotPlugin()
@@ -855,6 +959,26 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
       }
     }
 
+    // Advertise PID publisher
+    {
+      /// \todo(srmainwaring) hardcode update rate to 10 Hz
+      double rate{10.0};
+      std::chrono::duration<double> period{rate > 0.0 ? 1.0 / rate : 0.0};
+      this->dataPtr->pubPeriod = std::chrono::duration_cast<
+          std::chrono::steady_clock::duration>(period);
+
+      control->pidTopic = transport::TopicUtils::AsValidTopic(
+          "/model/" + this->dataPtr->modelName
+          + "/joint/" + control->jointName + "/pid");
+
+      control->pidPub = this->dataPtr->
+          node.Advertise<gz::msgs::Param>(control->pidTopic);  
+      if (!control->pidPub)
+      {
+        gzerr << "Error advertising topic [" << control->pidTopic << "]\n";
+      }
+    }
+
     this->dataPtr->controls.push_back(control);
     controlSDF = controlSDF->GetNextElement("control");
   }
@@ -1278,8 +1402,8 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
 
             if (this->dataPtr->arduPilotOnline)
             {
-                double dt =
-                    std::chrono::duration_cast<std::chrono::duration<double> >(
+                double dt = std::chrono::duration_cast<
+                    std::chrono::duration<double> >(
                         _info.simTime - this->dataPtr->
                             lastControllerUpdateTime).count();
                 this->ApplyMotorForces(dt, _ecm);
@@ -1293,18 +1417,27 @@ void gz::sim::systems::ArduPilotPlugin::PostUpdate(
     const gz::sim::UpdateInfo &_info,
     const gz::sim::EntityComponentManager &_ecm)
 {
-    std::lock_guard<std::mutex> lock(this->dataPtr->mutex);
+    // std::lock_guard<std::mutex> lock(this->dataPtr->mutex);
 
     // Publish the new state.
     if (!_info.paused && _info.simTime > this->dataPtr->lastControllerUpdateTime
         && this->dataPtr->arduPilotOnline)
     {
-        double t =
-            std::chrono::duration_cast<std::chrono::duration<double>>(
-                _info.simTime).count();
+        double t = std::chrono::duration_cast<
+            std::chrono::duration<double>>(_info.simTime).count();
         this->CreateStateJSON(t, _ecm);
         this->SendState();
         this->dataPtr->lastControllerUpdateTime = _info.simTime;
+    }
+
+    // Publish messages
+    {
+      auto elapsed = _info.simTime - this->dataPtr->lastPubTime;
+      if (!_info.paused || elapsed > this->dataPtr->pubPeriod)
+      {
+        this->dataPtr->lastPubTime = _info.simTime;
+        this->dataPtr->PublishPIDs();
+      }
     }
 }
 
@@ -1417,6 +1550,8 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
             const double force = this->dataPtr->controls[i]->pid.Update(
                 error, std::chrono::duration<double>(_dt));
             jfcComp->Data()[0] = force;
+            this->dataPtr->controls[i]->pidAct = vel;
+            this->dataPtr->controls[i]->pidTgt = velTarget;
         }
       }
       else if (this->dataPtr->controls[i]->type == "POSITION")
@@ -1432,6 +1567,8 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
             const double force = this->dataPtr->controls[i]->pid.Update(
                 error, std::chrono::duration<double>(_dt));
             jfcComp->Data()[0] = force;
+            this->dataPtr->controls[i]->pidAct = pos;
+            this->dataPtr->controls[i]->pidTgt = posTarget;
         }
       }
       else if (this->dataPtr->controls[i]->type == "EFFORT")
