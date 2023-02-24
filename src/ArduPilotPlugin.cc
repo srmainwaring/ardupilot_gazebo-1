@@ -642,6 +642,19 @@ void gz::sim::systems::ArduPilotPlugin::Configure(
         sdfClone->Get<gz::math::Pose3d>("gazeboXYZToNED");
   }
 
+  // default publish rate is 1 Hz
+  {
+    double rate = 1.0;
+    if (sdfClone->HasElement("publish_rate"))
+    {
+      rate = sdfClone->Get<double>("publish_rate");
+    }
+    std::chrono::duration<double> period{rate > 0.0 ? 1.0 / rate : 0.0};
+    this->dataPtr->pubPeriod = std::chrono::duration_cast<
+        std::chrono::steady_clock::duration>(period);
+    gzmsg << "Publish PIDs at " << rate << "Hz\n";
+  }
+
   // Load control channel params
   this->LoadControlChannels(sdfClone, _ecm);
 
@@ -961,12 +974,6 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
 
     // Advertise PID publisher
     {
-      /// \todo(srmainwaring) hardcode update rate to 10 Hz
-      double rate{10.0};
-      std::chrono::duration<double> period{rate > 0.0 ? 1.0 / rate : 0.0};
-      this->dataPtr->pubPeriod = std::chrono::duration_cast<
-          std::chrono::steady_clock::duration>(period);
-
       control->pidTopic = transport::TopicUtils::AsValidTopic(
           "/model/" + this->dataPtr->modelName
           + "/joint/" + control->jointName + "/pid");

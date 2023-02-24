@@ -797,6 +797,9 @@
       <!-- Sensors -->
       <imuName>iris_with_standoffs::imu_link::imu_sensor</imuName>
 
+      <!-- Publishing -->
+      <publish_rate>10</publish_rate>
+
       <!--
           incoming control command [0, 1]
           so offset it by 0 to get [0, 1]
