@@ -52,8 +52,10 @@
 #include <gz/math/Pose3.hh>
 #include <gz/math/PID.hh>
 #include <gz/math/Vector3.hh>
+#include <gz/msgs/Utility.hh>
 #include <gz/plugin/Register.hh>
 #include <gz/transport/Node.hh>
+#include <gz/transport/TopicUtils.hh>
 
 #include <sdf/sdf.hh>
 
@@ -142,6 +144,12 @@ class Control
   /// \brief Publisher for sending commands
   public: gz::transport::Node::Publisher pub;
 
+  /// \brief Topic name for PID service
+  public: std::string pidService;
+
+  /// \brief PID service callback
+  public: bool OnPID(const gz::msgs::PID &_req, gz::msgs::PID &_rep);
+
   /// \brief unused coefficients
   public: double rotorVelocitySlowdownSim;
   public: double frequencyCutoff;
@@ -156,6 +164,56 @@ class Control
 double Control::kDefaultRotorVelocitySlowdownSim = 10.0;
 double Control::kDefaultFrequencyCutoff = 5.0;
 double Control::kDefaultSamplingRate = 0.2;
+
+/////////////////////////////////////////////////
+bool Control::OnPID(const gz::msgs::PID &_req, gz::msgs::PID &_rep)
+{
+  // Update PIDs
+  if (_req.has_p_gain_optional())
+  {
+    this->pid.SetPGain(gz::msgs::Convert(_req.p_gain_optional()));
+  }
+  if (_req.has_i_gain_optional())
+  {
+    this->pid.SetIGain(gz::msgs::Convert(_req.i_gain_optional()));
+  }
+  if (_req.has_d_gain_optional())
+  {
+    this->pid.SetDGain(gz::msgs::Convert(_req.d_gain_optional()));
+  }
+  if (_req.has_i_max_optional())
+  {
+    this->pid.SetIMax(gz::msgs::Convert(_req.i_max_optional()));
+  }
+  if (_req.has_i_min_optional())
+  {
+    this->pid.SetIMin(gz::msgs::Convert(_req.i_min_optional()));
+  }
+  if (_req.has_limit_optional())
+  {
+    this->pid.SetCmdMax(gz::msgs::Convert(_req.limit_optional()));
+    this->pid.SetCmdMin(gz::msgs::Convert(_req.limit_optional()) * -1.0);
+  }
+
+  // Populate response with current PIDs
+  gz::msgs::Set(_rep.mutable_p_gain_optional(), this->pid.PGain());
+  gz::msgs::Set(_rep.mutable_i_gain_optional(), this->pid.IGain());
+  gz::msgs::Set(_rep.mutable_d_gain_optional(), this->pid.DGain());
+  gz::msgs::Set(_rep.mutable_i_max_optional(), this->pid.IMax());
+  gz::msgs::Set(_rep.mutable_i_min_optional(), this->pid.IMin());
+  gz::msgs::Set(_rep.mutable_limit_optional(), this->pid.CmdMax());
+
+  gzdbg << "Updated PIDs for [" << this->jointName << "]\n"
+        << "p_gain: " << this->pid.PGain() << "\n"
+        << "i_gain: " << this->pid.IGain() << "\n"
+        << "d_gain: " << this->pid.DGain() << "\n"
+        << "i_max: " << this->pid.IMax() << "\n"
+        << "i_min: " << this->pid.IMin() << "\n"
+        << "cmd_max: " << this->pid.CmdMax() << "\n"
+        << "cmd_min: " << this->pid.CmdMin() << "\n";
+
+  return true;
+}
 
 /////////////////////////////////////////////////
 // Wrapper class to store callback functions
@@ -207,7 +265,7 @@ class gz::sim::systems::ArduPilotPluginPrivate
   public: std::string worldName;
 
   /// \brief Array of controllers
-  public: std::vector<Control> controls;
+  public: std::vector<std::shared_ptr<Control>> controls;
 
   /// \brief keep track of controller update sim-time.
   public: std::chrono::steady_clock::duration lastControllerUpdateTime{0};
@@ -407,24 +465,24 @@ void gz::sim::systems::ArduPilotPlugin::Reset(const UpdateInfo &_info,
   {
     gz::sim::components::JointForceCmd* jfcComp = nullptr;
     gz::sim::components::JointVelocityCmd* jvcComp = nullptr;
-    if (this->dataPtr->controls[i].useForce ||
-        this->dataPtr->controls[i].type == "EFFORT")
+    if (this->dataPtr->controls[i]->useForce ||
+        this->dataPtr->controls[i]->type == "EFFORT")
     {
       jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(
-          this->dataPtr->controls[i].joint);
+          this->dataPtr->controls[i]->joint);
       if (jfcComp == nullptr)
       {
-        jfcComp = _ecm.CreateComponent(this->dataPtr->controls[i].joint,
+        jfcComp = _ecm.CreateComponent(this->dataPtr->controls[i]->joint,
             gz::sim::components::JointForceCmd({0}));
       }
     }
-    else if (this->dataPtr->controls[i].type == "VELOCITY")
+    else if (this->dataPtr->controls[i]->type == "VELOCITY")
     {
       jvcComp = _ecm.Component<gz::sim::components::JointVelocityCmd>(
-          this->dataPtr->controls[i].joint);
+          this->dataPtr->controls[i]->joint);
       if (jvcComp == nullptr)
       {
-        jvcComp = _ecm.CreateComponent(this->dataPtr->controls[i].joint,
+        jvcComp = _ecm.CreateComponent(this->dataPtr->controls[i]->joint,
             gz::sim::components::JointVelocityCmd({0}));
       }
     }
@@ -539,61 +597,61 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
 
   while (controlSDF)
   {
-    Control control;
+    auto control = std::make_shared<Control>();
 
     if (controlSDF->HasAttribute("channel"))
     {
-      control.channel =
+      control->channel =
         atoi(controlSDF->GetAttribute("channel")->GetAsString().c_str());
     }
     else if (controlSDF->HasAttribute("id"))
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
              <<  "please deprecate attribute id, use channel instead.\n";
-      control.channel =
+      control->channel =
         atoi(controlSDF->GetAttribute("id")->GetAsString().c_str());
     }
     else
     {
-      control.channel = this->dataPtr->controls.size();
+      control->channel = this->dataPtr->controls.size();
       gzwarn << "[" << this->dataPtr->modelName << "] "
              <<  "id/channel attribute not specified, use order parsed ["
-             << control.channel << "].\n";
+             << control->channel << "].\n";
     }
 
     if (controlSDF->HasElement("type"))
     {
-      control.type = controlSDF->Get<std::string>("type");
+      control->type = controlSDF->Get<std::string>("type");
     }
     else
     {
       gzerr << "[" << this->dataPtr->modelName << "] "
             <<  "Control type not specified,"
             << " using velocity control by default.\n";
-      control.type = "VELOCITY";
+      control->type = "VELOCITY";
     }
 
-    if (control.type != "VELOCITY" &&
-        control.type != "POSITION" &&
-        control.type != "EFFORT" &&
-        control.type != "COMMAND")
+    if (control->type != "VELOCITY" &&
+        control->type != "POSITION" &&
+        control->type != "EFFORT" &&
+        control->type != "COMMAND")
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
-             << "Control type [" << control.type
+             << "Control type [" << control->type
              << "] not recognized, must be one of"
              << "VELOCITY, POSITION, EFFORT, COMMAND."
              << " default to VELOCITY.\n";
-      control.type = "VELOCITY";
+      control->type = "VELOCITY";
     }
 
     if (controlSDF->HasElement("useForce"))
     {
-      control.useForce = controlSDF->Get<bool>("useForce");
+      control->useForce = controlSDF->Get<bool>("useForce");
     }
 
     if (controlSDF->HasElement("jointName"))
     {
-      control.jointName = controlSDF->Get<std::string>("jointName");
+      control->jointName = controlSDF->Get<std::string>("jointName");
     }
     else
     {
@@ -603,44 +661,44 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
     }
 
     // Get the pointer to the joint.
-    control.joint = JointByName(_ecm,
-        this->dataPtr->model.Entity(), control.jointName);
-    if (control.joint == gz::sim::kNullEntity)
+    control->joint = JointByName(_ecm,
+        this->dataPtr->model.Entity(), control->jointName);
+    if (control->joint == gz::sim::kNullEntity)
     {
       gzerr << "[" << this->dataPtr->modelName << "] "
             << "Couldn't find specified joint ["
-            << control.jointName << "]. This plugin will not run.\n";
+            << control->jointName << "]. This plugin will not run.\n";
       return;
     }
 
     // set up publisher if relaying the command
-    if (control.type == "COMMAND")
+    if (control->type == "COMMAND")
     {
       if (controlSDF->HasElement("cmd_topic"))
       {
-        control.cmdTopic = controlSDF->Get<std::string>("cmd_topic");
+        control->cmdTopic = controlSDF->Get<std::string>("cmd_topic");
       }
       else
       {
-        control.cmdTopic =
+        control->cmdTopic =
             "/world/" + this->dataPtr->worldName
           + "/model/" + this->dataPtr->modelName
-          + "/joint/" + control.jointName + "/cmd";
+          + "/joint/" + control->jointName + "/cmd";
         gzwarn << "[" << this->dataPtr->modelName << "] "
-            << "Control type [" << control.type
+            << "Control type [" << control->type
             << "] requires a valid <cmd_topic>. Using default\n";
       }
 
       gzmsg << "[" << this->dataPtr->modelName << "] "
-        << "Advertising on " << control.cmdTopic << ".\n";
-      control.pub = this->dataPtr->
-          node.Advertise<msgs::Double>(control.cmdTopic);
+        << "Advertising on " << control->cmdTopic << ".\n";
+      control->pub = this->dataPtr->
+          node.Advertise<msgs::Double>(control->cmdTopic);
     }
 
     if (controlSDF->HasElement("multiplier"))
     {
       // overwrite turningDirection, deprecated.
-      control.multiplier = controlSDF->Get<double>("multiplier");
+      control->multiplier = controlSDF->Get<double>("multiplier");
     }
     else if (controlSDF->HasElement("turningDirection"))
     {
@@ -652,87 +710,87 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
       // special cases mimic from controls_gazebo_plugins
       if (turningDirection == "cw")
       {
-        control.multiplier = -1;
+        control->multiplier = -1;
       }
       else if (turningDirection == "ccw")
       {
-        control.multiplier = 1;
+        control->multiplier = 1;
       }
       else
       {
         gzdbg << "[" << this->dataPtr->modelName << "] "
               << "not string, check turningDirection as float\n";
-        control.multiplier = controlSDF->Get<double>("turningDirection");
+        control->multiplier = controlSDF->Get<double>("turningDirection");
       }
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <multiplier> (or deprecated <turningDirection>)"
             << " not specified, "
-            << " default to " << control.multiplier
+            << " default to " << control->multiplier
             << " (or deprecated <turningDirection> 'ccw').\n";
     }
 
     if (controlSDF->HasElement("offset"))
     {
-      control.offset = controlSDF->Get<double>("offset");
+      control->offset = controlSDF->Get<double>("offset");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <offset> not specified, default to "
-            << control.offset << "\n";
+            << control->offset << "\n";
     }
 
     if (controlSDF->HasElement("servo_min"))
     {
-      control.servo_min = controlSDF->Get<double>("servo_min");
+      control->servo_min = controlSDF->Get<double>("servo_min");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <servo_min> not specified, default to "
-            << control.servo_min << "\n";
+            << control->servo_min << "\n";
     }
 
     if (controlSDF->HasElement("servo_max"))
     {
-      control.servo_max = controlSDF->Get<double>("servo_max");
+      control->servo_max = controlSDF->Get<double>("servo_max");
     }
     else
     {
       gzdbg << "[" << this->dataPtr->modelName << "] "
-            << "channel[" << control.channel
+            << "channel[" << control->channel
             << "]: <servo_max> not specified, default to "
-            << control.servo_max << "\n";
+            << control->servo_max << "\n";
     }
 
-    control.rotorVelocitySlowdownSim =
+    control->rotorVelocitySlowdownSim =
         controlSDF->Get("rotorVelocitySlowdownSim", 1).first;
 
-    if (gz::math::equal(control.rotorVelocitySlowdownSim, 0.0))
+    if (gz::math::equal(control->rotorVelocitySlowdownSim, 0.0))
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
-             << "control for joint [" << control.jointName
+             << "control for joint [" << control->jointName
              << "] rotorVelocitySlowdownSim is zero,"
              << " assume no slowdown.\n";
-      control.rotorVelocitySlowdownSim = 1.0;
+      control->rotorVelocitySlowdownSim = 1.0;
     }
 
-    control.frequencyCutoff =
-          controlSDF->Get("frequencyCutoff", control.frequencyCutoff).first;
-    control.samplingRate =
-          controlSDF->Get("samplingRate", control.samplingRate).first;
+    control->frequencyCutoff =
+          controlSDF->Get("frequencyCutoff", control->frequencyCutoff).first;
+    control->samplingRate =
+          controlSDF->Get("samplingRate", control->samplingRate).first;
 
     // use gazebo::math::Filter
-    control.filter.Fc(control.frequencyCutoff, control.samplingRate);
+    control->filter.Fc(control->frequencyCutoff, control->samplingRate);
 
     // initialize filter to zero value
-    control.filter.Set(0.0);
+    control->filter.Set(0.0);
 
     // note to use this filter, do
     // stateFiltered = filter.Process(stateRaw);
@@ -740,51 +798,64 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
     // Overload the PID parameters if they are available.
     double param;
     // carry over from ArduCopter plugin
-    param = controlSDF->Get("vel_p_gain", control.pid.PGain()).first;
-    control.pid.SetPGain(param);
+    param = controlSDF->Get("vel_p_gain", control->pid.PGain()).first;
+    control->pid.SetPGain(param);
 
-    param = controlSDF->Get("vel_i_gain", control.pid.IGain()).first;
-    control.pid.SetIGain(param);
+    param = controlSDF->Get("vel_i_gain", control->pid.IGain()).first;
+    control->pid.SetIGain(param);
 
-    param = controlSDF->Get("vel_d_gain", control.pid.DGain()).first;
-    control.pid.SetDGain(param);
+    param = controlSDF->Get("vel_d_gain", control->pid.DGain()).first;
+    control->pid.SetDGain(param);
 
-    param = controlSDF->Get("vel_i_max", control.pid.IMax()).first;
-    control.pid.SetIMax(param);
+    param = controlSDF->Get("vel_i_max", control->pid.IMax()).first;
+    control->pid.SetIMax(param);
 
-    param = controlSDF->Get("vel_i_min", control.pid.IMin()).first;
-    control.pid.SetIMin(param);
+    param = controlSDF->Get("vel_i_min", control->pid.IMin()).first;
+    control->pid.SetIMin(param);
 
-    param = controlSDF->Get("vel_cmd_max", control.pid.CmdMax()).first;
-    control.pid.SetCmdMax(param);
+    param = controlSDF->Get("vel_cmd_max", control->pid.CmdMax()).first;
+    control->pid.SetCmdMax(param);
 
-    param = controlSDF->Get("vel_cmd_min", control.pid.CmdMin()).first;
-    control.pid.SetCmdMin(param);
+    param = controlSDF->Get("vel_cmd_min", control->pid.CmdMin()).first;
+    control->pid.SetCmdMin(param);
 
     // new params, overwrite old params if exist
-    param = controlSDF->Get("p_gain", control.pid.PGain()).first;
-    control.pid.SetPGain(param);
+    param = controlSDF->Get("p_gain", control->pid.PGain()).first;
+    control->pid.SetPGain(param);
 
-    param = controlSDF->Get("i_gain", control.pid.IGain()).first;
-    control.pid.SetIGain(param);
+    param = controlSDF->Get("i_gain", control->pid.IGain()).first;
+    control->pid.SetIGain(param);
 
-    param = controlSDF->Get("d_gain", control.pid.DGain()).first;
-    control.pid.SetDGain(param);
+    param = controlSDF->Get("d_gain", control->pid.DGain()).first;
+    control->pid.SetDGain(param);
 
-    param = controlSDF->Get("i_max", control.pid.IMax()).first;
-    control.pid.SetIMax(param);
+    param = controlSDF->Get("i_max", control->pid.IMax()).first;
+    control->pid.SetIMax(param);
 
-    param = controlSDF->Get("i_min", control.pid.IMin()).first;
-    control.pid.SetIMin(param);
+    param = controlSDF->Get("i_min", control->pid.IMin()).first;
+    control->pid.SetIMin(param);
 
-    param = controlSDF->Get("cmd_max", control.pid.CmdMax()).first;
-    control.pid.SetCmdMax(param);
+    param = controlSDF->Get("cmd_max", control->pid.CmdMax()).first;
+    control->pid.SetCmdMax(param);
 
-    param = controlSDF->Get("cmd_min", control.pid.CmdMin()).first;
-    control.pid.SetCmdMin(param);
+    param = controlSDF->Get("cmd_min", control->pid.CmdMin()).first;
+    control->pid.SetCmdMin(param);
 
     // set pid initial command
-    control.pid.SetCmd(0.0);
+    control->pid.SetCmd(0.0);
+
+    // Advertise PID service
+    {
+      control->pidService = transport::TopicUtils::AsValidTopic(
+          "/model/" + this->dataPtr->modelName
+          + "/joint/" + control->jointName + "/pid");
+
+      if (!this->dataPtr->node.Advertise(control->pidService,
+          &Control::OnPID, control.get()))
+      {
+        gzerr << "Error advertising service [" << control->pidService << "]\n";
+      }
+    }
 
     this->dataPtr->controls.push_back(control);
     controlSDF = controlSDF->GetNextElement("control");
@@ -1245,8 +1316,8 @@ void gz::sim::systems::ArduPilotPlugin::ResetPIDs()
   // Reset velocity PID for controls
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
   {
-    this->dataPtr->controls[i].cmd = 0;
-    // this->dataPtr->controls[i].pid.Reset();
+    this->dataPtr->controls[i]->cmd = 0;
+    // this->dataPtr->controls[i]->pid.Reset();
   }
 }
 
@@ -1300,74 +1371,74 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
   {
     // Publish commands to be relayed to other plugins
-    if (this->dataPtr->controls[i].type == "COMMAND")
+    if (this->dataPtr->controls[i]->type == "COMMAND")
     {
       msgs::Double cmd;
-      cmd.set_data(this->dataPtr->controls[i].cmd);
-      this->dataPtr->controls[i].pub.Publish(cmd);
+      cmd.set_data(this->dataPtr->controls[i]->cmd);
+      this->dataPtr->controls[i]->pub.Publish(cmd);
       continue;
     }
 
     gz::sim::components::JointForceCmd* jfcComp = nullptr;
     gz::sim::components::JointVelocityCmd* jvcComp = nullptr;
-    if (this->dataPtr->controls[i].useForce ||
-        this->dataPtr->controls[i].type == "EFFORT")
+    if (this->dataPtr->controls[i]->useForce ||
+        this->dataPtr->controls[i]->type == "EFFORT")
     {
       jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(
-          this->dataPtr->controls[i].joint);
+          this->dataPtr->controls[i]->joint);
       if (jfcComp == nullptr)
       {
-        jfcComp = _ecm.CreateComponent(this->dataPtr->controls[i].joint,
+        jfcComp = _ecm.CreateComponent(this->dataPtr->controls[i]->joint,
             gz::sim::components::JointForceCmd({0}));
       }
     }
-    else if (this->dataPtr->controls[i].type == "VELOCITY")
+    else if (this->dataPtr->controls[i]->type == "VELOCITY")
     {
       jvcComp = _ecm.Component<gz::sim::components::JointVelocityCmd>(
-          this->dataPtr->controls[i].joint);
+          this->dataPtr->controls[i]->joint);
       if (jvcComp == nullptr)
       {
-        jvcComp = _ecm.CreateComponent(this->dataPtr->controls[i].joint,
+        jvcComp = _ecm.CreateComponent(this->dataPtr->controls[i]->joint,
             gz::sim::components::JointVelocityCmd({0}));
       }
     }
 
-    if (this->dataPtr->controls[i].useForce)
+    if (this->dataPtr->controls[i]->useForce)
     {
-      if (this->dataPtr->controls[i].type == "VELOCITY")
+      if (this->dataPtr->controls[i]->type == "VELOCITY")
       {
-        const double velTarget = this->dataPtr->controls[i].cmd /
-          this->dataPtr->controls[i].rotorVelocitySlowdownSim;
+        const double velTarget = this->dataPtr->controls[i]->cmd /
+          this->dataPtr->controls[i]->rotorVelocitySlowdownSim;
         gz::sim::components::JointVelocity* vComp =
           _ecm.Component<gz::sim::components::JointVelocity>(
-              this->dataPtr->controls[i].joint);
+              this->dataPtr->controls[i]->joint);
         if (vComp && !vComp->Data().empty())
         {
             const double vel = vComp->Data()[0];
             const double error = vel - velTarget;
-            const double force = this->dataPtr->controls[i].pid.Update(
+            const double force = this->dataPtr->controls[i]->pid.Update(
                 error, std::chrono::duration<double>(_dt));
             jfcComp->Data()[0] = force;
         }
       }
-      else if (this->dataPtr->controls[i].type == "POSITION")
+      else if (this->dataPtr->controls[i]->type == "POSITION")
       {
-        const double posTarget = this->dataPtr->controls[i].cmd;
+        const double posTarget = this->dataPtr->controls[i]->cmd;
         gz::sim::components::JointPosition* pComp =
           _ecm.Component<gz::sim::components::JointPosition>(
-              this->dataPtr->controls[i].joint);
+              this->dataPtr->controls[i]->joint);
         if (pComp && !pComp->Data().empty())
         {
             const double pos = pComp->Data()[0];
             const double error = pos - posTarget;
-            const double force = this->dataPtr->controls[i].pid.Update(
+            const double force = this->dataPtr->controls[i]->pid.Update(
                 error, std::chrono::duration<double>(_dt));
             jfcComp->Data()[0] = force;
         }
       }
-      else if (this->dataPtr->controls[i].type == "EFFORT")
+      else if (this->dataPtr->controls[i]->type == "EFFORT")
       {
-        const double force = this->dataPtr->controls[i].cmd;
+        const double force = this->dataPtr->controls[i]->cmd;
         jfcComp->Data()[0] = force;
       }
       else
@@ -1377,20 +1448,20 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
     }
     else
     {
-      if (this->dataPtr->controls[i].type == "VELOCITY")
+      if (this->dataPtr->controls[i]->type == "VELOCITY")
       {
-        jvcComp->Data()[0] = this->dataPtr->controls[i].cmd;
+        jvcComp->Data()[0] = this->dataPtr->controls[i]->cmd;
       }
-      else if (this->dataPtr->controls[i].type == "POSITION")
+      else if (this->dataPtr->controls[i]->type == "POSITION")
       {
         /// \todo(anyone) figure out whether position control matters,
         /// and if so, how to use it.
         gzwarn << "Failed to do position control on joint " << i <<
             " because there's no JointPositionCmd component (yet?)" << "/n";
       }
-      else if (this->dataPtr->controls[i].type == "EFFORT")
+      else if (this->dataPtr->controls[i]->type == "EFFORT")
       {
-        const double force = this->dataPtr->controls[i].cmd;
+        const double force = this->dataPtr->controls[i]->cmd;
         jvcComp->Data()[0] = force;
       }
       else
@@ -1644,18 +1715,18 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                 // bound incoming cmd between 0 and 1
                 double raw_cmd = (pwm - pwm_min)/(pwm_max - pwm_min);
                 raw_cmd = gz::math::clamp(raw_cmd, 0.0, 1.0);
-                this->dataPtr->controls[i].cmd =
+                this->dataPtr->controls[i]->cmd =
                     multiplier * (raw_cmd + offset);
 
 #if 0
                 gzdbg << "apply input chan["
-                    << this->dataPtr->controls[i].channel
+                    << this->dataPtr->controls[i]->channel
                     << "] to control chan[" << i
                     << "] with joint name ["
-                    << this->dataPtr->controls[i].jointName
+                    << this->dataPtr->controls[i]->jointName
                     << "] pwm [" << pwm
                     << "] raw cmd [" << raw_cmd
-                    << "] adjusted cmd [" << this->dataPtr->controls[i].cmd
+                    << "] adjusted cmd [" << this->dataPtr->controls[i]->cmd
                     << "].\n";
 #endif
             }
@@ -1663,7 +1734,7 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
             {
                 gzerr << "[" << this->dataPtr->modelName << "] "
                     << "control[" << i << "] channel ["
-                    << this->dataPtr->controls[i].channel
+                    << this->dataPtr->controls[i]->channel
                     << "] is greater than the number of servo channels ["
                     << max_servo_channels
                     << "], control not applied.\n";
