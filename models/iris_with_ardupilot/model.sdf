@@ -762,23 +762,6 @@
       <link_name>iris_with_standoffs::rotor_3</link_name>
     </plugin>
 
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_0_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_1_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_2_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_3_joint</joint_name>
-    </plugin>
-
     <plugin name="ArduPilotPlugin"
       filename="ArduPilotPlugin">
       <!-- Port settings -->
