@@ -38,10 +38,23 @@
       <uri>model://runway</uri>
     </include>
 
-    <!-- Check that we can connect to multiple vehicles
+    <!--
+      Check that we can connect to multiple vehicles
+      
+      # create separate folders to run the SITL instances
+      mkdir iris0 iris1 iris2
 
-      $ sim_vehicle.py -I 0 -v ArduCopter -f gazebo-iris -m JSON
-      $ sim_vehicle.py -I 1 -v ArduCopter -f gazebo-iris -m JSON
+      # terminal 0
+      cd iris0
+      sim_vehicle.py -I 0 -v ArduCopter -f gazebo-iris -/-model JSON -/-console
+
+      # terminal 1
+      cd iris1
+      sim_vehicle.py -I 1 -v ArduCopter -f gazebo-iris -/-model JSON -/-console
+
+      # terminal 2
+      cd iris2
+      sim_vehicle.py -I 2 -v ArduCopter -f gazebo-iris -/-model JSON -/-console
 
       The console will show 'link down' until all vehicles have connected 
     -->
