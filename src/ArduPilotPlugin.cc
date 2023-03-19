@@ -1702,15 +1702,16 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
         // enforce limit on the number of <control> elements
         if (i < MAX_MOTORS)
         {
-            if (this->dataPtr->controls[i].channel < max_servo_channels)
+            if (this->dataPtr->controls[i]->channel < max_servo_channels)
             {
                 // convert pwm to raw cmd: [servo_min, servo_max] => [0, 1],
                 // default is: [1000, 2000] => [0, 1]
-                const double pwm = _pwm[this->dataPtr->controls[i].channel];
-                const double pwm_min = this->dataPtr->controls[i].servo_min;
-                const double pwm_max = this->dataPtr->controls[i].servo_max;
-                const double multiplier = this->dataPtr->controls[i].multiplier;
-                const double offset = this->dataPtr->controls[i].offset;
+                const double pwm = _pwm[this->dataPtr->controls[i]->channel];
+                const double pwm_min = this->dataPtr->controls[i]->servo_min;
+                const double pwm_max = this->dataPtr->controls[i]->servo_max;
+                const double multiplier =
+                    this->dataPtr->controls[i]->multiplier;
+                const double offset = this->dataPtr->controls[i]->offset;
 
                 // bound incoming cmd between 0 and 1
                 double raw_cmd = (pwm - pwm_min)/(pwm_max - pwm_min);
