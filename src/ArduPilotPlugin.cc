@@ -159,7 +159,7 @@ class Control
 
   /// \brief PID publisher
   public: gz::transport::Node::Publisher pidPub;
-  
+
   public: void PublishPID();
 
   /// \brief unused coefficients
@@ -979,7 +979,7 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
           + "/joint/" + control->jointName + "/pid");
 
       control->pidPub = this->dataPtr->
-          node.Advertise<gz::msgs::Param>(control->pidTopic);  
+          node.Advertise<gz::msgs::Param>(control->pidTopic);
       if (!control->pidPub)
       {
         gzerr << "Error advertising topic [" << control->pidTopic << "]\n";
