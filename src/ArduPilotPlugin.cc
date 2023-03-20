@@ -28,7 +28,6 @@
 
 
 #include <gz/common/SignalHandler.hh>
-#include <gz/msgs/Utility.hh>
 #include <gz/sim/components/CustomSensor.hh>
 #include <gz/sim/components/Imu.hh>
 #include <gz/sim/components/Joint.hh>
