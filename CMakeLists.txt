@@ -53,6 +53,17 @@ target_link_libraries(ParachutePlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
+add_library(CatapultPlugin
+  SHARED
+  src/CatapultPlugin.cc
+)
+target_include_directories(CatapultPlugin PRIVATE
+  include
+)
+target_link_libraries(CatapultPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
 # --------------------------------------------------------------------------- #
 # Install.
 
@@ -60,6 +71,7 @@ install(
   TARGETS
   ArduPilotPlugin
   ParachutePlugin
+  CatapultPlugin
   DESTINATION lib/${PROJECT_NAME}
 )
 
