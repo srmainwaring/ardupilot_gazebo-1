@@ -138,7 +138,7 @@
       </joint>
 
       <include>
-        <uri>model://gimbal_small_2d</uri>
+        <uri>model://gimbal_small_3d</uri>
         <name>gimbal</name>
         <pose>0 0 0.9055 1.57 0 1.57</pose>    
       </include>
@@ -163,15 +163,22 @@
       <plugin
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
-        <joint_name>gimbal::roll_joint</joint_name>
-        <topic>arm_cmd</topic>
+        <joint_name>gimbal::yaw_joint</joint_name>
+        <topic>/gimbal/cmd_yaw</topic>
         <p_gain>2</p_gain>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
-        <joint_name>gimbal::tilt_joint</joint_name>
-        <topic>tilt_cmd</topic>
+        <joint_name>gimbal::roll_joint</joint_name>
+        <topic>/gimbal/cmd_roll</topic>
+        <p_gain>2</p_gain>
+      </plugin>
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>gimbal::pitch_joint</joint_name>
+        <topic>/gimbal/cmd_pitch</topic>
         <p_gain>2</p_gain>
       </plugin>
     </model>
