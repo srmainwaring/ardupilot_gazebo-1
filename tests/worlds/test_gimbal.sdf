@@ -144,14 +144,14 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>gimbal::roll_joint</joint_name>
-        <topic>arm_cmd</topic>
+        <topic>/gimbal/cmd_roll</topic>
         <p_gain>2</p_gain>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>gimbal::tilt_joint</joint_name>
-        <topic>tilt_cmd</topic>
+        <topic>/gimbal/cmd_pitch</topic>
         <p_gain>2</p_gain>
       </plugin>
 
