@@ -1,8 +1,8 @@
-<?xml version='1.0'?>
-<sdf version='1.9'>
-  <model name='gimbal_small_3d'>
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="gimbal_small_3d">
     <pose>0 0 0.18 0 0 0</pose>
-    <link name='base_link'>
+    <link name="base_link">
       <inertial>
         <mass>0.2</mass>
         <inertia>
@@ -14,7 +14,7 @@
           <izz>0.0001</izz>
         </inertia>
       </inertial>
-      <visual name='base_visual'>
+      <visual name="base_visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/base_plate.dae</uri>
@@ -26,7 +26,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name='base_collision'>
+      <collision name="base_collision">
         <pose>0.01 0.075 -0.025 0 0 0</pose>
         <geometry>
           <box>
@@ -36,7 +36,7 @@
       </collision>
     </link>
 
-    <link name='yaw_link'>
+    <link name="yaw_link">
       <inertial>
         <mass>0.01</mass>
         <inertia>
@@ -48,7 +48,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name='yaw_visual'>
+      <visual name="yaw_visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/yaw_arm.dae</uri>
@@ -60,7 +60,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name='yaw_collision'>
+      <collision name="yaw_collision">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/yaw_arm.dae</uri>
@@ -68,7 +68,7 @@
         </geometry>
       </collision>
     </link>
-    <joint name='yaw_joint' type='revolute'>
+    <joint name="yaw_joint" type="revolute">
       <parent>base_link</parent>
       <child>yaw_link</child>
       <axis>
@@ -84,7 +84,7 @@
       <pose>0.0105 0.065 -0.002 0 0 0</pose>
     </joint>
 
-    <link name='roll_link'>
+    <link name="roll_link">
       <inertial>
         <mass>0.01</mass>
         <inertia>
@@ -96,7 +96,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name='roll_visual'>
+      <visual name="roll_visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/roll_arm.dae</uri>
@@ -108,7 +108,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name='roll_collision'>
+      <collision name="roll_collision">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/roll_arm.dae</uri>
@@ -116,7 +116,7 @@
         </geometry>
       </collision>
     </link>
-    <joint name='roll_joint' type='revolute'>
+    <joint name="roll_joint" type="revolute">
       <parent>yaw_link</parent>
       <child>roll_link</child>
       <axis>
@@ -132,7 +132,7 @@
       <pose>0.0099 0.002 -0.05 0 0 0</pose>
     </joint>
 
-    <link name='pitch_link'>
+    <link name="pitch_link">
       <inertial>
         <mass>0.01</mass>
         <inertia>
@@ -144,7 +144,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name='pitch_visual'>
+      <visual name="pitch_visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -157,7 +157,7 @@
           <specular>0.1 0.1 0.1 1.0</specular>
         </material>
       </visual>
-      <collision name='pitch_collision'>
+      <collision name="pitch_collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -165,7 +165,7 @@
           </mesh>
         </geometry>
       </collision>
-      <visual name='camera_visual'>
+      <visual name="camera_visual">
         <pose>0 0 0.02 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -179,7 +179,7 @@
           <specular>0.1 0.1 0.1 1.0</specular>
         </material>
       </visual>
-      <collision name='camera_collision'>
+      <collision name="camera_collision">
         <pose>0 0 0.02 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -206,7 +206,7 @@
         <visualize>1</visualize>
       </sensor>
     </link>
-    <joint name='pitch_joint' type='revolute'>
+    <joint name="pitch_joint" type="revolute">
       <parent>roll_link</parent>
       <child>pitch_link</child>
       <axis>
