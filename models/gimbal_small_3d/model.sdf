@@ -204,6 +204,9 @@
         <always_on>1</always_on>
         <update_rate>10</update_rate>
         <visualize>1</visualize>
+
+        <plugin filename="CameraZoomPlugin" name="CameraZoomPlugin">
+        </plugin>
       </sensor>
     </link>
     <joint name="pitch_joint" type="revolute">

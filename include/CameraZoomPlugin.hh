@@ -14,8 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef CAMERAPLUGIN_HH_
-#define CAMERAPLUGIN_HH_
+#ifndef CAMERAZOOMPLUGIN_HH_
+#define CAMERAZOOMPLUGIN_HH_
 
 #include <memory>
 
@@ -26,17 +26,17 @@ namespace sim {
 inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
 
-/// \brief Camera plugin.
-class CameraPlugin :
+/// \brief Camera zoom plugin.
+class CameraZoomPlugin :
     public System,
     public ISystemPreUpdate,
     public ISystemConfigure
 {
   /// \brief Destructor
-  public: virtual ~CameraPlugin();
+  public: virtual ~CameraZoomPlugin();
 
   /// \brief Constructor
-  public: CameraPlugin();
+  public: CameraZoomPlugin();
 
   // Documentation inherited
   public: void PreUpdate(const gz::sim::UpdateInfo &_info,
@@ -59,4 +59,4 @@ class CameraPlugin :
 }  // namespace sim
 }  // namespace gz
 
-#endif  // CAMERAPLUGIN_HH_
+#endif  // CAMERAZOOMPLUGIN_HH_
