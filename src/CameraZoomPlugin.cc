@@ -18,23 +18,40 @@
 #include "CameraZoomPlugin.hh"
 
 #include <atomic>
+#include <mutex>
 #include <string>
 
-#include <gz/plugin/Register.hh>
 #include <gz/common/Profiler.hh>
+
+#include <gz/math/Angle.hh>
 #include <gz/math/Pose3.hh>
 #include <gz/math/Quaternion.hh>
+
+#include <gz/plugin/Register.hh>
+
+#include <gz/rendering/Camera.hh>
+#include <gz/rendering/RenderEngine.hh>
+#include <gz/rendering/RenderingIface.hh>
+#include <gz/rendering/Scene.hh>
+
+#include <gz/sim/components/Camera.hh>
 #include <gz/sim/components/Model.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/ParentEntity.hh>
 #include <gz/sim/components/Link.hh>
 #include <gz/sim/components/World.hh>
+#include <gz/sim/rendering/Events.hh>
+#include "gz/sim/Events.hh"
 #include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
 #include <gz/sim/Sensor.hh>
 #include <gz/sim/World.hh>
 #include <gz/sim/Util.hh>
+
 #include <gz/transport/Node.hh>
+
+#include <sdf/Camera.hh>
+#include <sdf/Sensor.hh>
 
 namespace gz {
 namespace sim {
@@ -47,23 +64,50 @@ class CameraZoomPlugin::Impl
   /// \brief Handle a zoom command.
   public: void OnZoom(const msgs::Double &_msg);
 
+  /// \brief Initialise the rendering camera.
+  public: void InitialiseCamera();
+
   /// \brief World occupied by the parent model.
   public: World world{kNullEntity};
 
   /// \brief The parent model.
   public: Model parentModel{kNullEntity};
 
-  /// \brief Sensor containing this plugin.
-  public: Sensor sensor{kNullEntity};
+  /// \brief Camera sensor.
+  public: Sensor cameraSensor{kNullEntity};
+
+  /// \brief Name of the camera.
+  public: std::string cameraName;
 
   /// \brief Name of the topic to subscribe to zoom commands.
   public: std::string zoomTopic;
 
+  /// \brief Flag to mark if zoom command has changed.
+  public: std::atomic<bool> zoomChanged{false};
+
   /// \brief Value of the most recently received zoom command.
   public: std::atomic<double> zoomCommand{1.0};
 
+  /// \brief Current horizontal field of view (radians). 
+  public: double hfov{2.0};
+
+  /// \brief Zoom factor.
+  public: double zoom{1.0};
+
+  /// \brief Maximum zoom factor.
+  public: double maxZoom{10.0};
+
+  /// \brief Minimum zoom factor == 1.0.
+  public: static constexpr double minZoom{1.0};
+
   /// \brief Flag set to true if the plugin is correctly initialised.
   public: bool isValidConfig{false};
+
+  //// \brief Pointer to the rendering scene
+  public: rendering::ScenePtr scene;
+
+  /// \brief Pointer to the rendering camera
+  public: rendering::CameraPtr camera;
 
   /// \brief Transport node for subscriptions.
   public: transport::Node node;
@@ -73,6 +117,48 @@ class CameraZoomPlugin::Impl
 void CameraZoomPlugin::Impl::OnZoom(const msgs::Double &_msg)
 {
   this->zoomCommand = _msg.data();
+  this->zoomChanged = true;
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::InitialiseCamera()
+{
+  // Wait for render engine to be available.
+  if (rendering::loadedEngines().empty())
+    return;
+
+  // Get scene.
+  if (!this->scene)
+  {
+    this->scene = rendering::sceneFromFirstRenderEngine();
+  }
+
+  // Return if scene not ready or no sensors available.
+  if (!this->scene->IsInitialized() ||
+      this->scene->SensorCount() == 0)
+  {
+    gzwarn << "No scene or camera sensors available.\n";
+    return;
+  }
+
+  // Get camera.
+  if (!this->camera)
+  {
+    auto sensor = this->scene->SensorByName(this->cameraName);
+    if (!sensor)
+    {
+      gzerr << "Unable to find sensor: [" << this->cameraName << "]."
+            << std::endl;
+      return;
+    }
+    this->camera = std::dynamic_pointer_cast<rendering::Camera>(sensor);
+    if (!this->camera)
+    {
+      gzerr << "[" << this->cameraName << "] is not a camera."
+            << std::endl;
+      return;
+    }
+  }
 }
 
 //////////////////////////////////////////////////
@@ -90,31 +176,31 @@ void CameraZoomPlugin::Configure(
     const Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
     EntityComponentManager &_ecm,
-    EventManager &)
+    EventManager &/*_eventMgr*/)
 {
-  // Capture sensor entity.
-  this->impl->sensor = Sensor(_entity);
-  if (!this->impl->sensor.Valid(_ecm))
+  // Capture camera sensor.
+  this->impl->cameraSensor = Sensor(_entity);
+  if (!this->impl->cameraSensor.Valid(_ecm))
   {
-    gzerr << "CameraZoomPlugin should be attached to a sensor. "
+    gzerr << "CameraZoomPlugin must be attached to a camera sensor. "
              "Failed to initialize.\n";
     return;
   }
 
-  // Display plugin load status..
-  if (auto maybeName = this->impl->sensor.Name(_ecm))
+  // Display plugin load status.
+  if (auto maybeName = this->impl->cameraSensor.Name(_ecm))
   {
     gzdbg << "CameraZoomPlugin attached to sensor ["
           << maybeName.value() << "].\n";
   }
   else
   {
-    gzerr << "CameraZoomPlugin has invalid name.\n";
+    gzerr << "Camera sensor has invalid name.\n";
     return;
   }
 
   // Retrieve parent model.
-  if (auto maybeParentLink = this->impl->sensor.Parent(_ecm))
+  if (auto maybeParentLink = this->impl->cameraSensor.Parent(_ecm))
   {
     Link link(maybeParentLink.value());
     if (link.Valid(_ecm))
@@ -142,6 +228,12 @@ void CameraZoomPlugin::Configure(
     return;
   }
 
+  // Parameters
+  if (_sdf->HasElement("max_zoom"))
+  {
+    this->impl->maxZoom = _sdf->Get<double>("max_zoom");
+  }
+
   // Configure zoom command topic.
   {
     std::vector<std::string> topics;
@@ -150,7 +242,7 @@ void CameraZoomPlugin::Configure(
       topics.push_back(_sdf->Get<std::string>("topic"));
     }
     auto parentModelName = this->impl->parentModel.Name(_ecm);
-    auto sensorName = this->impl->sensor.Name(_ecm).value();
+    auto sensorName = this->impl->cameraSensor.Name(_ecm).value();
     topics.push_back("/model/" + parentModelName +
         "/sensor/" + sensorName + "/zoom/cmd_zoom");
     this->impl->zoomTopic = validTopic(topics);
@@ -176,6 +268,59 @@ void CameraZoomPlugin::PreUpdate(
 
   if (!this->impl->isValidConfig)
     return;
+
+  // Set up the render connection.
+  if (!this->impl->camera)
+  {
+    this->impl->InitialiseCamera();
+    return;
+  }
+
+  Entity cameraEntity = this->impl->cameraSensor.Entity();
+  auto comp = _ecm.Component<components::Camera>(cameraEntity);
+  if (!comp)
+    return;
+
+  if (!this->impl->zoomChanged)
+    return;
+
+  // Update component.
+  sdf::Sensor &sensor = comp->Data();
+  sdf::Camera *cameraSdf = sensor.CameraSensor();
+
+  this->impl->zoom = std::max(std::min(this->impl->zoomCommand.load(),
+      this->impl->maxZoom), this->impl->minZoom);
+  math::Angle oldHfov = cameraSdf->HorizontalFov();
+  math::Angle newHfov = this->impl->hfov / this->impl->zoom;
+
+  cameraSdf->SetHorizontalFov(newHfov);
+  _ecm.SetChanged(cameraEntity, components::Camera::typeId,
+        ComponentState::OneTimeChange);
+
+  // Update rendering camera.
+  this->impl->camera->SetHFOV(newHfov);
+
+  gzdbg << "CameraZoomPlugin:\n"
+        << "Zoom:     " << this->impl->zoom << "\n"
+        << "Old HFOV: " << oldHfov << " rad\n"
+        << "New HFOV: " << newHfov << " rad\n";
+
+  this->impl->zoomChanged = false;
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::PostUpdate(
+    const UpdateInfo &/*_info*/,
+    const EntityComponentManager &_ecm)
+{
+  if (!this->impl->cameraName.empty())
+    return;
+
+  Entity cameraEntity = this->impl->cameraSensor.Entity();
+  this->impl->cameraName =
+      removeParentScope(scopedName(cameraEntity, _ecm, "::", false), "::");
+
+  gzdbg << "Camera name: [" << this->impl->cameraName << "].\n";
 }
 
 //////////////////////////////////////////////////
@@ -189,7 +334,8 @@ GZ_ADD_PLUGIN(
     gz::sim::systems::CameraZoomPlugin,
     gz::sim::System,
     gz::sim::systems::CameraZoomPlugin::ISystemConfigure,
-    gz::sim::systems::CameraZoomPlugin::ISystemPreUpdate)
+    gz::sim::systems::CameraZoomPlugin::ISystemPreUpdate,
+    gz::sim::systems::CameraZoomPlugin::ISystemPostUpdate)
 
 GZ_ADD_PLUGIN_ALIAS(
     gz::sim::systems::CameraZoomPlugin,

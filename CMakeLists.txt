@@ -19,6 +19,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(gz-cmake3 REQUIRED)
 set(GZ_CMAKE_VER ${gz-cmake3_VERSION_MAJOR})
 
+gz_find_package(gz-common5 REQUIRED)
+set(GZ_COMMON_VER ${gz-common5_VERSION_MAJOR})
+
+gz_find_package(gz-rendering7 REQUIRED)
+set(GZ_RENDERING_VER ${gz-rendering7_VERSION_MAJOR})
+
 gz_find_package(gz-sim7 REQUIRED)
 set(GZ_SIM_VER ${gz-sim7_VERSION_MAJOR})
 
@@ -61,6 +67,8 @@ target_include_directories(CameraZoomPlugin PRIVATE
   include
 )
 target_link_libraries(CameraZoomPlugin PRIVATE
+  gz-common${GZ_COMMON_VER}::gz-common${GZ_COMMON_VER}
+  gz-rendering${GZ_RENDERING_VER}::gz-rendering${GZ_RENDERING_VER}
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
