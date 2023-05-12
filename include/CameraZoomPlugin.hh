@@ -29,8 +29,9 @@ namespace systems {
 /// \brief Camera zoom plugin.
 class CameraZoomPlugin :
     public System,
+    public ISystemConfigure,
     public ISystemPreUpdate,
-    public ISystemConfigure
+    public ISystemPostUpdate
 {
   /// \brief Destructor
   public: virtual ~CameraZoomPlugin();
@@ -41,6 +42,10 @@ class CameraZoomPlugin :
   // Documentation inherited
   public: void PreUpdate(const gz::sim::UpdateInfo &_info,
                          gz::sim::EntityComponentManager &_ecm) final;
+
+  // Documentation inherited
+  public: void PostUpdate(const gz::sim::UpdateInfo &_info,
+                         const gz::sim::EntityComponentManager &_ecm) final;
 
   // Documentation inherited
   public: void Configure(const Entity &_entity,

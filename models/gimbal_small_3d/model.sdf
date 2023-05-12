@@ -205,8 +205,11 @@
         <update_rate>10</update_rate>
         <visualize>1</visualize>
 
-        <plugin filename="CameraZoomPlugin" name="CameraZoomPlugin">
+        <plugin filename="CameraZoomPlugin"
+            name="CameraZoomPlugin">
+          <max_zoom>15.0</max_zoom>
         </plugin>
+
       </sensor>
     </link>
     <joint name="pitch_joint" type="revolute">
