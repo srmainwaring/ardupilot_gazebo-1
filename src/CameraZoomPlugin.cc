@@ -17,6 +17,7 @@
 
 #include "CameraZoomPlugin.hh"
 
+#include <atomic>
 #include <string>
 
 #include <gz/plugin/Register.hh>
@@ -43,15 +44,36 @@ namespace systems {
 //////////////////////////////////////////////////
 class CameraZoomPlugin::Impl
 {
+  /// \brief Handle a zoom command.
+  public: void OnZoom(const msgs::Double &_msg);
+
   /// \brief World occupied by the parent model.
   public: World world{kNullEntity};
+
+  /// \brief The parent model.
+  public: Model parentModel{kNullEntity};
 
   /// \brief Sensor containing this plugin.
   public: Sensor sensor{kNullEntity};
 
+  /// \brief Name of the topic to subscribe to zoom commands.
+  public: std::string zoomTopic;
+
+  /// \brief Value of the most recently received zoom command.
+  public: std::atomic<double> zoomCommand{1.0};
+
+  /// \brief Flag set to true if the plugin is correctly initialised.
+  public: bool isValidConfig{false};
+
   /// \brief Transport node for subscriptions.
   public: transport::Node node;
 };
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::OnZoom(const msgs::Double &_msg)
+{
+  this->zoomCommand = _msg.data();
+}
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
@@ -79,6 +101,37 @@ void CameraZoomPlugin::Configure(
     return;
   }
 
+  // Display plugin load status..
+  if (auto maybeName = this->impl->sensor.Name(_ecm))
+  {
+    gzdbg << "CameraZoomPlugin attached to sensor ["
+          << maybeName.value() << "].\n";
+  }
+  else
+  {
+    gzerr << "CameraZoomPlugin has invalid name.\n";
+    return;
+  }
+
+  // Retrieve parent model.
+  if (auto maybeParentLink = this->impl->sensor.Parent(_ecm))
+  {
+    Link link(maybeParentLink.value());
+    if (link.Valid(_ecm))
+    {   
+      if (auto maybeParentModel = link.ParentModel(_ecm))
+      {
+        this->impl->parentModel = maybeParentModel.value();
+      }
+    }
+  }
+  if (!this->impl->parentModel.Valid(_ecm))
+  {
+    gzerr << "CameraZoomPlugin - parent model not found. "
+             "Failed to initialize.\n";
+    return;
+  }
+
   // Retrieve world entity.
   this->impl->world = World(
       _ecm.EntityByComponents(components::World()));
@@ -89,16 +142,29 @@ void CameraZoomPlugin::Configure(
     return;
   }
 
-  if (this->impl->sensor.Name(_ecm))
+  // Configure zoom command topic.
   {
-    gzmsg << "CameraZoomPlugin attached to sensor ["
-          << this->impl->sensor.Name(_ecm).value()
-          << "].\n";
+    std::vector<std::string> topics;
+    if (_sdf->HasElement("topic"))
+    {
+      topics.push_back(_sdf->Get<std::string>("topic"));
+    }
+    auto parentModelName = this->impl->parentModel.Name(_ecm);
+    auto sensorName = this->impl->sensor.Name(_ecm).value();
+    topics.push_back("/model/" + parentModelName +
+        "/sensor/" + sensorName + "/zoom/cmd_zoom");
+    this->impl->zoomTopic = validTopic(topics);
   }
-  else
-  {
-    gzerr << "CameraZoomPlugin has invalid name.\n";
-  }
+
+  // Subscriptions.
+  this->impl->node.Subscribe(
+      this->impl->zoomTopic,
+      &CameraZoomPlugin::Impl::OnZoom, this->impl.get());
+
+  gzdbg << "CameraZoomPlugin subscribing to messages on "
+         << "[" << this->impl->zoomTopic << "]\n";
+
+  this->impl->isValidConfig = true;
 }
 
 //////////////////////////////////////////////////
@@ -107,6 +173,9 @@ void CameraZoomPlugin::PreUpdate(
     EntityComponentManager &_ecm)
 {
   GZ_PROFILE("CameraZoomPlugin::PreUpdate");
+
+  if (!this->impl->isValidConfig)
+    return;
 }
 
 //////////////////////////////////////////////////
