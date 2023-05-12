@@ -53,14 +53,14 @@ target_link_libraries(ParachutePlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
-add_library(CameraPlugin
+add_library(CameraZoomPlugin
   SHARED
-  src/CameraPlugin.cc
+  src/CameraZoomPlugin.cc
 )
-target_include_directories(CameraPlugin PRIVATE
+target_include_directories(CameraZoomPlugin PRIVATE
   include
 )
-target_link_libraries(CameraPlugin PRIVATE
+target_link_libraries(CameraZoomPlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
@@ -71,7 +71,7 @@ install(
   TARGETS
   ArduPilotPlugin
   ParachutePlugin
-  CameraPlugin
+  CameraZoomPlugin
   DESTINATION lib/${PROJECT_NAME}
 )
 

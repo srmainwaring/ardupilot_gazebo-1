@@ -15,7 +15,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CameraPlugin.hh"
+#include "CameraZoomPlugin.hh"
 
 #include <string>
 
@@ -30,6 +30,7 @@
 #include <gz/sim/components/World.hh>
 #include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
+#include <gz/sim/Sensor.hh>
 #include <gz/sim/World.hh>
 #include <gz/sim/Util.hh>
 #include <gz/transport/Node.hh>
@@ -40,13 +41,13 @@ inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
 
 //////////////////////////////////////////////////
-class CameraPlugin::Impl
+class CameraZoomPlugin::Impl
 {
   /// \brief World occupied by the parent model.
   public: World world{kNullEntity};
 
-  /// \brief Model containing this plugin.
-  public: Model model{kNullEntity};
+  /// \brief Sensor containing this plugin.
+  public: Sensor sensor{kNullEntity};
 
   /// \brief Transport node for subscriptions.
   public: transport::Node node;
@@ -54,26 +55,26 @@ class CameraPlugin::Impl
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
-CameraPlugin::~CameraPlugin() = default;
+CameraZoomPlugin::~CameraZoomPlugin() = default;
 
 //////////////////////////////////////////////////
-CameraPlugin::CameraPlugin() :
-    impl(std::make_unique<CameraPlugin::Impl>())
+CameraZoomPlugin::CameraZoomPlugin() :
+    impl(std::make_unique<CameraZoomPlugin::Impl>())
 {
 }
 
 //////////////////////////////////////////////////
-void CameraPlugin::Configure(
+void CameraZoomPlugin::Configure(
     const Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
     EntityComponentManager &_ecm,
     EventManager &)
 {
-  // Capture model entity.
-  this->impl->model = Model(_entity);
-  if (!this->impl->model.Valid(_ecm))
+  // Capture sensor entity.
+  this->impl->sensor = Sensor(_entity);
+  if (!this->impl->sensor.Valid(_ecm))
   {
-    gzerr << "CameraPlugin should be attached to a model. "
+    gzerr << "CameraZoomPlugin should be attached to a sensor. "
              "Failed to initialize.\n";
     return;
   }
@@ -83,18 +84,29 @@ void CameraPlugin::Configure(
       _ecm.EntityByComponents(components::World()));
   if (!this->impl->world.Valid(_ecm))
   {
-    gzerr << "CameraPlugin - world not found. "
+    gzerr << "CameraZoomPlugin - world not found. "
              "Failed to initialize.\n";
     return;
+  }
+
+  if (this->impl->sensor.Name(_ecm))
+  {
+    gzmsg << "CameraZoomPlugin attached to sensor ["
+          << this->impl->sensor.Name(_ecm).value()
+          << "].\n";
+  }
+  else
+  {
+    gzerr << "CameraZoomPlugin has invalid name.\n";
   }
 }
 
 //////////////////////////////////////////////////
-void CameraPlugin::PreUpdate(
+void CameraZoomPlugin::PreUpdate(
     const UpdateInfo &/*_info*/,
     EntityComponentManager &_ecm)
 {
-  GZ_PROFILE("CameraPlugin::PreUpdate");
+  GZ_PROFILE("CameraZoomPlugin::PreUpdate");
 }
 
 //////////////////////////////////////////////////
@@ -105,11 +117,11 @@ void CameraPlugin::PreUpdate(
 }  // namespace gz
 
 GZ_ADD_PLUGIN(
-    gz::sim::systems::CameraPlugin,
+    gz::sim::systems::CameraZoomPlugin,
     gz::sim::System,
-    gz::sim::systems::CameraPlugin::ISystemConfigure,
-    gz::sim::systems::CameraPlugin::ISystemPreUpdate)
+    gz::sim::systems::CameraZoomPlugin::ISystemConfigure,
+    gz::sim::systems::CameraZoomPlugin::ISystemPreUpdate)
 
 GZ_ADD_PLUGIN_ALIAS(
-    gz::sim::systems::CameraPlugin,
-    "CameraPlugin")
+    gz::sim::systems::CameraZoomPlugin,
+    "CameraZoomPlugin")
