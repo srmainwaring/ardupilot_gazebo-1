@@ -88,7 +88,7 @@ class CameraZoomPlugin::Impl
   /// \brief Value of the most recently received zoom command.
   public: std::atomic<double> zoomCommand{1.0};
 
-  /// \brief Current horizontal field of view (radians). 
+  /// \brief Current horizontal field of view (radians).
   public: double hfov{2.0};
 
   /// \brief Zoom factor.
@@ -204,7 +204,7 @@ void CameraZoomPlugin::Configure(
   {
     Link link(maybeParentLink.value());
     if (link.Valid(_ecm))
-    {   
+    {
       if (auto maybeParentModel = link.ParentModel(_ecm))
       {
         this->impl->parentModel = maybeParentModel.value();
