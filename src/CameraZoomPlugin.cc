@@ -56,6 +56,21 @@
 #include <sdf/Sensor.hh>
 
 namespace gz {
+namespace rendering
+{
+inline namespace GZ_RENDERING_VERSION_NAMESPACE {
+
+/// \typedef CameraWeakPtr
+/// \brief Weak pointer to Camera
+typedef std::weak_ptr<rendering::Camera> CameraWeakPtr;
+
+/// \typedef SceneWeakPtr
+/// \brief Weak pointer to Scene
+typedef std::weak_ptr<rendering::Scene> SceneWeakPtr;
+
+}
+}  // rendering
+
 namespace sim {
 inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
@@ -139,10 +154,10 @@ class CameraZoomPlugin::Impl
   public: bool isValidConfig{false};
 
   //// \brief Pointer to the rendering scene
-  public: rendering::ScenePtr scene;
+  public: rendering::SceneWeakPtr scene;
 
   /// \brief Pointer to the rendering camera
-  public: rendering::CameraPtr camera;
+  public: rendering::CameraWeakPtr camera;
 
   /// \brief Transport node for subscriptions.
   public: transport::Node node;
@@ -163,23 +178,23 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
     return;
 
   // Get scene.
-  if (!this->scene)
+  if (!this->scene.lock())
   {
     this->scene = rendering::sceneFromFirstRenderEngine();
   }
 
   // Return if scene not ready or no sensors available.
-  if (!this->scene->IsInitialized() ||
-      this->scene->SensorCount() == 0)
+  if (!this->scene.lock()->IsInitialized() ||
+      this->scene.lock()->SensorCount() == 0)
   {
     gzwarn << "No scene or camera sensors available.\n";
     return;
   }
 
   // Get camera.
-  if (!this->camera)
+  if (!this->camera.lock())
   {
-    auto sensor = this->scene->SensorByName(this->cameraName);
+    auto sensor = this->scene.lock()->SensorByName(this->cameraName);
     if (!sensor)
     {
       gzerr << "Unable to find sensor: [" << this->cameraName << "]."
@@ -187,7 +202,7 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
       return;
     }
     this->camera = std::dynamic_pointer_cast<rendering::Camera>(sensor);
-    if (!this->camera)
+    if (!this->camera.lock())
     {
       gzerr << "[" << this->cameraName << "] is not a camera."
             << std::endl;
@@ -315,7 +330,7 @@ void CameraZoomPlugin::PreUpdate(
     return;
 
   // Set up the render connection.
-  if (!this->impl->camera)
+  if (!this->impl->camera.lock())
   {
     this->impl->InitialiseCamera();
     return;
@@ -345,7 +360,7 @@ void CameraZoomPlugin::PreUpdate(
         ComponentState::OneTimeChange);
 
   // Update rendering camera.
-  this->impl->camera->SetHFOV(newHfov);
+  this->impl->camera.lock()->SetHFOV(newHfov);
 
   gzdbg << "CameraZoomPlugin:\n"
         << "Zoom:     " << this->impl->zoom << "\n"
