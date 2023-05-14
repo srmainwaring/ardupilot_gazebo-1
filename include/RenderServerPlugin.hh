@@ -37,7 +37,7 @@ namespace systems {
     public gz::sim::ISystemConfigure,
     public gz::sim::ISystemPreUpdate
   {
-    private: common::ConnectionPtr connection{nullptr};
+    private: std::vector<common::ConnectionPtr> connections;
 
     private: rendering::ScenePtr scene{nullptr};
 
@@ -55,7 +55,7 @@ namespace systems {
       this->scene = scenePtr;
     };
 
-    public: void CheckMeshes()
+    public: void OnPreRender()
     {
       if (this->scene == nullptr)
       {
@@ -63,7 +63,12 @@ namespace systems {
         gzdbg << "Found Scene.\n";
       }
 
-      gzdbg << "RenderServerPlugin: checking meshes.\n";
+      gzdbg << "OnPreRender.\n";
+    }
+
+    public: void OnPostRender()
+    {
+      gzdbg << "OnPostRender.\n";
     }
 
     public: void Configure(
@@ -75,10 +80,18 @@ namespace systems {
     {
       gzdbg << "RenderServerPlugin: configuring.\n";
 
-      this->connection =
+      this->connections.push_back(
         _eventMgr.Connect<events::PreRender>(
-          std::bind(&RenderServerPlugin::CheckMeshes, this)
-        );
+          std::bind(&RenderServerPlugin::OnPreRender, this)
+        )
+      );
+
+      this->connections.push_back(
+        _eventMgr.Connect<events::PostRender>(
+          std::bind(&RenderServerPlugin::OnPostRender, this)
+        )
+      );
+
       this->eventMgr = &_eventMgr;
     };
 
@@ -87,7 +100,6 @@ namespace systems {
       EntityComponentManager &)
     {
       // gzdbg << "RenderServerPlugin: pre-updating.\n";
-
       this->eventMgr->Emit<events::ForceRender>();
     };
   };
