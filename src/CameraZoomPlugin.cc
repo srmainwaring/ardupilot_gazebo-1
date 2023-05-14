@@ -21,6 +21,7 @@
 #include <mutex>
 #include <string>
 
+#include <gz/common/Event.hh>
 #include <gz/common/Profiler.hh>
 
 #include <gz/math/Angle.hh>
@@ -153,6 +154,12 @@ class CameraZoomPlugin::Impl
   /// \brief Flag set to true if the plugin is correctly initialised.
   public: bool isValidConfig{false};
 
+  public: EventManager *eventMgr{nullptr};
+
+  public: void PerformRenderingOperations();  
+
+  public: common::ConnectionPtr connection{nullptr};
+
   //// \brief Pointer to the rendering scene
   public: rendering::SceneWeakPtr scene;
 
@@ -212,6 +219,13 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
 }
 
 //////////////////////////////////////////////////
+// void CameraZoomPlugin::Impl::PerformRenderingOperations()
+void CameraZoomPlugin::Impl::PerformRenderingOperations()
+{
+  gzdbg << "CameraZoomPlugin::Impl::PerformRenderingOperations\n";
+}
+
+//////////////////////////////////////////////////
 //////////////////////////////////////////////////
 CameraZoomPlugin::~CameraZoomPlugin() = default;
 
@@ -226,7 +240,7 @@ void CameraZoomPlugin::Configure(
     const Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
     EntityComponentManager &_ecm,
-    EventManager &/*_eventMgr*/)
+    EventManager &_eventMgr)
 {
   // Capture camera sensor.
   /// \todo(srmainwaring) replace with `sim::Sensor` when available.
@@ -307,6 +321,14 @@ void CameraZoomPlugin::Configure(
     this->impl->zoomTopic = validTopic(topics);
   }
 
+  // Capture event manager.
+  this->impl->eventMgr = &_eventMgr;
+
+  // Connection to render events.
+  this->impl->connection = _eventMgr.Connect<sim::events::PreRender>(
+      std::bind(&CameraZoomPlugin::Impl::PerformRenderingOperations,
+          this->impl.get()));
+
   // Subscriptions.
   this->impl->node.Subscribe(
       this->impl->zoomTopic,
@@ -341,6 +363,8 @@ void CameraZoomPlugin::PreUpdate(
   auto comp = _ecm.Component<components::Camera>(cameraEntity);
   if (!comp)
     return;
+
+  this->impl->eventMgr->Emit<events::ForceRender>();
 
   if (!this->impl->zoomChanged)
     return;
