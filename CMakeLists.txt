@@ -22,6 +22,9 @@ set(GZ_CMAKE_VER ${gz-cmake3_VERSION_MAJOR})
 gz_find_package(gz-common5 REQUIRED)
 set(GZ_COMMON_VER ${gz-common5_VERSION_MAJOR})
 
+gz_find_package(gz-plugin2 REQUIRED COMPONENTS register)
+set(GZ_PLUGIN_VER ${gz-plugin2_VERSION_MAJOR})
+
 gz_find_package(gz-rendering7 REQUIRED)
 set(GZ_RENDERING_VER ${gz-rendering7_VERSION_MAJOR})
 
@@ -68,6 +71,22 @@ target_include_directories(CameraZoomPlugin PRIVATE
 )
 target_link_libraries(CameraZoomPlugin PRIVATE
   gz-common${GZ_COMMON_VER}::gz-common${GZ_COMMON_VER}
+  gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
+  gz-rendering${GZ_RENDERING_VER}::gz-rendering${GZ_RENDERING_VER}
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
+
+add_library(RenderServerPlugin
+  SHARED
+  src/RenderServerPlugin.cc
+)
+target_include_directories(RenderServerPlugin PRIVATE
+  include
+)
+target_link_libraries(RenderServerPlugin PRIVATE
+  gz-common${GZ_COMMON_VER}::gz-common${GZ_COMMON_VER}
+  gz-plugin${GZ_PLUGIN_VER}::gz-plugin${GZ_PLUGIN_VER}
   gz-rendering${GZ_RENDERING_VER}::gz-rendering${GZ_RENDERING_VER}
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
