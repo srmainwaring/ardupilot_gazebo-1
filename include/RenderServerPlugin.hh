@@ -45,14 +45,15 @@ namespace systems {
 
     void FindScene()
     {
-      auto loadedEngNames = gz::rendering::loadedEngines();
+      // Wait for render engine to be available.
+      if (rendering::loadedEngines().empty())
+        return;
 
-      auto engineName = loadedEngNames[0];
-      auto engine = gz::rendering::engine(engineName);
-
-      auto scenePtr = engine->SceneByIndex(0);
-
-      this->scene = scenePtr;
+      // Get scene.
+      if (!this->scene)
+      {
+        this->scene = rendering::sceneFromFirstRenderEngine();
+      }
     };
 
     public: void OnPreRender()
@@ -80,19 +81,20 @@ namespace systems {
     {
       gzdbg << "RenderServerPlugin: configuring.\n";
 
+      this->eventMgr = &_eventMgr;
+
       this->connections.push_back(
-        _eventMgr.Connect<events::PreRender>(
+        this->eventMgr->Connect<events::PreRender>(
           std::bind(&RenderServerPlugin::OnPreRender, this)
         )
       );
 
       this->connections.push_back(
-        _eventMgr.Connect<events::PostRender>(
+        this->eventMgr->Connect<events::PostRender>(
           std::bind(&RenderServerPlugin::OnPostRender, this)
         )
       );
 
-      this->eventMgr = &_eventMgr;
     };
 
     public: void PreUpdate(
@@ -100,7 +102,7 @@ namespace systems {
       EntityComponentManager &)
     {
       // gzdbg << "RenderServerPlugin: pre-updating.\n";
-      this->eventMgr->Emit<events::ForceRender>();
+      // this->eventMgr->Emit<events::ForceRender>();
     };
   };
 
