@@ -66,9 +66,6 @@ class CameraZoomPlugin::Impl
   /// \brief Handle a zoom command.
   public: void OnZoom(const msgs::Double &_msg);
 
-  /// \brief Initialise the rendering camera.
-  public: void InitialiseCamera();
-
   /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
   /// \brief Check sensor entity is valid.
   public: bool SensorValid(const EntityComponentManager &_ecm) const
@@ -99,7 +96,6 @@ class CameraZoomPlugin::Impl
     return std::optional<sim::Entity>(parent->Data());
   }
 
-
   /// \brief World occupied by the parent model.
   public: World world{kNullEntity};
 
@@ -123,6 +119,9 @@ class CameraZoomPlugin::Impl
   /// \brief Value of the most recently received zoom command.
   public: std::atomic<double> zoomCommand{1.0};
 
+  /// \brief The zoomed horizontal field of view (radians).
+  public: std::atomic<double> zoomHfov{1.0};
+
   /// \brief Current horizontal field of view (radians).
   public: double hfov{2.0};
 
@@ -138,14 +137,31 @@ class CameraZoomPlugin::Impl
   /// \brief Flag set to true if the plugin is correctly initialised.
   public: bool isValidConfig{false};
 
+  //// \brief Pointer to the event manager
+  public: EventManager *eventMgr{nullptr};
+
+  /// \brief Connections to event callbacks
+  public: std::vector<common::ConnectionPtr> connections;
+
+  /// \brief Transport node for subscriptions.
+  public: transport::Node node;
+
+  // Render thread
+  public: void OnSceneUpdate();
+  public: void OnPreRender();
+  public: void OnRender();
+  public: void OnPostRender();
+  public: void OnRenderTeardown();
+
   //// \brief Pointer to the rendering scene
   public: rendering::ScenePtr scene;
 
   /// \brief Pointer to the rendering camera
   public: rendering::CameraPtr camera;
 
-  /// \brief Transport node for subscriptions.
-  public: transport::Node node;
+  /// \brief Flag to mark if the camera needs updating.
+  public: std::atomic<bool> cameraNeedsUpdate{false};
+
 };
 
 //////////////////////////////////////////////////
@@ -156,16 +172,19 @@ void CameraZoomPlugin::Impl::OnZoom(const msgs::Double &_msg)
 }
 
 //////////////////////////////////////////////////
-void CameraZoomPlugin::Impl::InitialiseCamera()
+// Render thread
+void CameraZoomPlugin::Impl::OnSceneUpdate()
 {
-  // Wait for render engine to be available.
-  if (rendering::loadedEngines().empty())
-    return;
+  // gzdbg << "Received SceneUpdate.\n";
 
   // Get scene.
   if (!this->scene)
   {
-    this->scene = rendering::sceneFromFirstRenderEngine();
+    // Wait for render engine to be available.
+    if (rendering::loadedEngines().empty())
+      return;
+
+   this->scene = rendering::sceneFromFirstRenderEngine();
   }
 
   // Return if scene not ready or no sensors available.
@@ -194,6 +213,45 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
       return;
     }
   }
+
+  // Only update camera on change
+  if (!this->cameraNeedsUpdate)
+    return;
+
+  // Update rendering camera.
+  this->camera->SetHFOV(math::Angle(this->zoomHfov.load()));
+
+  this->cameraNeedsUpdate = false;
+
+  gzdbg << "Updated camera HFOV.\n";
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::OnPreRender()
+{
+  // gzdbg << "Received PreRender.\n";
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::OnRender()
+{
+  // gzdbg << "Received Render.\n";
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::OnPostRender()
+{
+  // gzdbg << "Received PostRender.\n";
+}
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::OnRenderTeardown()
+{
+  gzdbg << "Received RenderTeardown.\n";
+
+  this->camera.reset();
+  this->scene.reset();
+  this->isValidConfig = false;
 }
 
 //////////////////////////////////////////////////
@@ -211,7 +269,7 @@ void CameraZoomPlugin::Configure(
     const Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
     EntityComponentManager &_ecm,
-    EventManager &/*_eventMgr*/)
+    EventManager &_eventMgr)
 {
   // Capture camera sensor.
   /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
@@ -224,7 +282,6 @@ void CameraZoomPlugin::Configure(
              "Failed to initialize.\n";
     return;
   }
-
 
   // Display plugin load status.
   /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
@@ -301,6 +358,34 @@ void CameraZoomPlugin::Configure(
   gzdbg << "CameraZoomPlugin subscribing to messages on "
          << "[" << this->impl->zoomTopic << "]\n";
 
+  // Connections
+  this->impl->connections.push_back(
+      _eventMgr.Connect<gz::sim::events::SceneUpdate>(
+          std::bind(&CameraZoomPlugin::Impl::OnSceneUpdate,
+          this->impl.get())));
+
+  this->impl->connections.push_back(
+      _eventMgr.Connect<gz::sim::events::PreRender>(
+          std::bind(&CameraZoomPlugin::Impl::OnPreRender,
+          this->impl.get())));
+
+  this->impl->connections.push_back(
+      _eventMgr.Connect<gz::sim::events::Render>(
+          std::bind(&CameraZoomPlugin::Impl::OnRender,
+          this->impl.get())));
+
+  this->impl->connections.push_back(
+      _eventMgr.Connect<gz::sim::events::PostRender>(
+          std::bind(&CameraZoomPlugin::Impl::OnPostRender,
+          this->impl.get())));
+
+  this->impl->connections.push_back(
+      _eventMgr.Connect<gz::sim::events::RenderTeardown>(
+          std::bind(&CameraZoomPlugin::Impl::OnRenderTeardown,
+          this->impl.get())));
+
+  this->impl->eventMgr = &_eventMgr;
+
   this->impl->isValidConfig = true;
 }
 
@@ -313,13 +398,6 @@ void CameraZoomPlugin::PreUpdate(
 
   if (!this->impl->isValidConfig)
     return;
-
-  // Set up the render connection.
-  if (!this->impl->camera)
-  {
-    this->impl->InitialiseCamera();
-    return;
-  }
 
   /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
   // Entity cameraEntity = this->impl->cameraSensor.Entity();
@@ -339,19 +417,18 @@ void CameraZoomPlugin::PreUpdate(
       this->impl->maxZoom), this->impl->minZoom);
   math::Angle oldHfov = cameraSdf->HorizontalFov();
   math::Angle newHfov = this->impl->hfov / this->impl->zoom;
+  this->impl->zoomHfov = newHfov.Radian();
 
   cameraSdf->SetHorizontalFov(newHfov);
   _ecm.SetChanged(cameraEntity, components::Camera::typeId,
         ComponentState::OneTimeChange);
-
-  // Update rendering camera.
-  this->impl->camera->SetHFOV(newHfov);
 
   gzdbg << "CameraZoomPlugin:\n"
         << "Zoom:     " << this->impl->zoom << "\n"
         << "Old HFOV: " << oldHfov << " rad\n"
         << "New HFOV: " << newHfov << " rad\n";
 
+  this->impl->cameraNeedsUpdate = true;
   this->impl->zoomChanged = false;
 }
 
