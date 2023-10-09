@@ -107,27 +107,32 @@
       </link>
     </model>
 
-    <!-- source of gravity -->
+    <!-- source of gravity
+    earth radius: 6.3710E6 m
+    earth mass:   5.972E24 kg
+    texture:      https://nasa3d.arc.nasa.gov/detail/ear0xuu2
+    -->
     <model name="earth">
       <static>0</static>
+      <pose>0 0 -6.3710E6 0 0 0</pose>
       <link name="earth">
         <gravity>0</gravity>
         <inertial>
-          <mass>5.972E14</mass>
+          <mass>5.972E24</mass>
           <inertia>
-            <ixx>2.38880E+16</ixx>
+            <ixx>2.38880E+26</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>2.38880E+16</iyy>
+            <iyy>2.38880E+26</iyy>
             <iyz>0</iyz>
-            <izz>2.38880E+16</izz>
+            <izz>2.38880E+26</izz>
           </inertia>
         </inertial>
         <collision name="collision">
           <pose degrees="true">0 0 0 90 0 0</pose>
           <geometry>
             <sphere>
-              <radius>10</radius>
+              <radius>6.3710E6</radius>
             </sphere>
           </geometry>
         </collision>
@@ -135,7 +140,7 @@
           <pose degrees="true">0 0 0 90 0 0</pose>
           <geometry>
             <sphere>
-              <radius>10</radius>
+              <radius>6.3710E6</radius>
             </sphere>
           </geometry>
           <material>
@@ -159,9 +164,9 @@
 
     </model>
 
-    <!-- red satellite in equatorial orbit -->
-    <model name="satellite1">
-      <pose>-15 0 0 0 0 0</pose>
+    <!-- red sphere -->
+    <model name="sphere">
+      <pose>0 0 0.5 0 0 0</pose>
       <link name="base_link">
         <gravity>1</gravity>
         <inertial>
@@ -197,128 +202,6 @@
           </material>
         </visual>
       </link>
-
-      <plugin filename="InitialVelocityPlugin"
-        name="InitialVelocityPlugin">
-        <debug>0</debug>
-        <linear>0 51.55 0</linear>
-        <link>base_link</link>
-        <p_gain>50</p_gain>
-        <i_gain>1</i_gain>
-        <d_gain>0</d_gain>
-        <i_max>10</i_max>
-        <i_min>-10</i_min>
-        <cmd_min>-1000</cmd_min>
-        <cmd_max>1000</cmd_max>
-      </plugin>
-    </model>
-
-    <!-- blue satellite in polar orbit -->
-    <model name="satellite2">
-      <pose>0 0 20 0 0 0</pose>
-      <link name="base_link">
-        <gravity>1</gravity>
-        <inertial>
-          <mass>1.0</mass>
-          <inertia>
-            <ixx>0.1</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.1</iyy>
-            <iyz>0</iyz>
-            <izz>0.1</izz>
-          </inertia>
-        </inertial>
-        <collision name="collision">
-          <pose degrees="true">0 0 0 90 0 0</pose>
-          <geometry>
-            <sphere>
-              <radius>0.5</radius>
-            </sphere>
-          </geometry>
-        </collision>
-        <visual name="visual">
-          <pose degrees="true">0 0 0 90 0 0</pose>
-          <geometry>
-            <sphere>
-              <radius>0.5</radius>
-            </sphere>
-          </geometry>
-          <material>
-            <ambient>0.0 0.0 1.0</ambient>
-            <diffuse>0.0 0.0 1.0</diffuse>
-            <specular>0.01 0.01 0.01 1.0</specular>
-          </material>
-        </visual>
-      </link>
-
-      <plugin filename="InitialVelocityPlugin"
-        name="InitialVelocityPlugin">
-        <debug>0</debug>
-        <linear>-44.64 0 0</linear>
-        <link>base_link</link>
-        <p_gain>50</p_gain>
-        <i_gain>1</i_gain>
-        <d_gain>0</d_gain>
-        <i_max>10</i_max>
-        <i_min>-10</i_min>
-        <cmd_min>-1000</cmd_min>
-        <cmd_max>1000</cmd_max>
-      </plugin>
-    </model>
-
-    <!-- green satellite in elliptical orbit -->
-    <model name="satellite3">
-      <pose>10 0 10 0 0 0</pose>
-      <link name="base_link">
-        <gravity>1</gravity>
-        <inertial>
-          <mass>1.0</mass>
-          <inertia>
-            <ixx>0.1</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.1</iyy>
-            <iyz>0</iyz>
-            <izz>0.1</izz>
-          </inertia>
-        </inertial>
-        <collision name="collision">
-          <pose degrees="true">0 0 0 90 0 0</pose>
-          <geometry>
-            <sphere>
-              <radius>0.5</radius>
-            </sphere>
-          </geometry>
-        </collision>
-        <visual name="visual">
-          <pose degrees="true">0 0 0 90 0 0</pose>
-          <geometry>
-            <sphere>
-              <radius>0.5</radius>
-            </sphere>
-          </geometry>
-          <material>
-            <ambient>0.0 1.0 0.0</ambient>
-            <diffuse>0.0 1.0 0.0</diffuse>
-            <specular>0.01 0.01 0.01 1.0</specular>
-          </material>
-        </visual>
-      </link>
-
-      <plugin filename="InitialVelocityPlugin"
-        name="InitialVelocityPlugin">
-        <debug>0</debug>
-        <linear>0 65.0 0</linear>
-        <link>base_link</link>
-        <p_gain>50</p_gain>
-        <i_gain>1</i_gain>
-        <d_gain>0</d_gain>
-        <i_max>10</i_max>
-        <i_min>-10</i_min>
-        <cmd_min>-1000</cmd_min>
-        <cmd_max>1000</cmd_max>
-      </plugin>
     </model>
 
   </world>
