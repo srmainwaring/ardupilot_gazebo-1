@@ -23,6 +23,7 @@
 #include <gz/common/Profiler.hh>
 #include <gz/math/Pose3.hh>
 #include <gz/math/Quaternion.hh>
+#include <gz/sim/components/Inertial.hh>
 #include <gz/sim/components/Link.hh>
 #include <gz/sim/components/Model.hh>
 #include <gz/sim/components/Name.hh>
@@ -47,20 +48,26 @@ class GravityPlugin::Impl
   /// \brief Name of the world entity.
   public: std::string worldName;
 
-  /// \brief Model entity.
-  public: Model model{kNullEntity};
+  /// \brief Model providing the source of gravity.
+  public: Model sourceModel{kNullEntity};
 
-  /// \brief Name of the model entity.
-  public: std::string modelName;
+  /// \brief Name of the gravity source model entity.
+  public: std::string sourceName;
 
-  /// \brief Link entity.
-  public: Link link{kNullEntity};
+  /// \brief Flag set to true for additional debug messages.
+  public: bool debug{false};
 
-  /// \brief Name of the link entity.
-  public: std::string linkName;
-
-  /// \brief Flag set to true if the model is correctly initialised.
+  /// \brief Flag set to true if the plugin is correctly configured.
   public: bool validConfig{false};
+
+  /// \brief Flag set to true if the plugin is initialised.
+  public: bool initialised{false};
+
+  /// \brief Universal gravitational constant (N m^2 / kg^2).
+  public: static constexpr double G{6.67430E-11};
+
+  /// \brief Mass of earth (kg).
+  //public: static constexpr double massEarth{5.972E24};
 };
 
 //////////////////////////////////////////////////
@@ -80,22 +87,11 @@ void GravityPlugin::Configure(
     EntityComponentManager &_ecm,
     EventManager &)
 {
-  // capture model entity
-  this->impl->model = Model(_entity);
-  if (!this->impl->model.Valid(_ecm))
-  {
-    gzerr << "GravityPlugin should be attached to a model. "
-             "Failed to initialize.\n";
-    return;
-  }
-  this->impl->modelName = this->impl->model.Name(_ecm);
-
-  // retrieve world entity
-  this->impl->world = World(
-      _ecm.EntityByComponents(components::World()));
+  // capture world entity
+  this->impl->world = World(_entity);
   if (!this->impl->world.Valid(_ecm))
   {
-    gzerr << "GravityPlugin - world not found. "
+    gzerr << "GravityPlugin: should be attached to a world. "
              "Failed to initialize.\n";
     return;
   }
@@ -105,32 +101,21 @@ void GravityPlugin::Configure(
   }
 
   // parameters
-  if (_sdf->HasElement("link"))
+  if (_sdf->HasElement("source"))
   {
-    this->impl->linkName = _sdf->Get<std::string>("link");
+    this->impl->sourceName = _sdf->Get<std::string>("source");
   }
   else
   {
-    gzerr << "GravityPlugin requires parameter 'link'. "
+    gzerr << "GravityPlugin: requires parameter 'source'. "
              "Failed to initialize.\n";
     return;
   }
 
-  // resolve links
-  this->impl->link = Link(_ecm.EntityByComponents(
-      components::Link(),
-      components::ParentEntity(this->impl->model.Entity()),
-      components::Name(this->impl->linkName)));
-  if (!this->impl->link.Valid(_ecm))
+  if (_sdf->HasElement("debug"))
   {
-    gzerr << "GravityPlugin - link ["
-             << this->impl->linkName
-             << "] not found. "
-             "Failed to initialize.\n";
-    return;
+    this->impl->debug = _sdf->Get<bool>("debug");
   }
-  this->impl->link.EnableVelocityChecks(_ecm, true);
-  this->impl->link.EnableAccelerationChecks(_ecm, true);
 
   this->impl->validConfig = true;
 }
@@ -142,71 +127,130 @@ void GravityPlugin::PreUpdate(
 {
   GZ_PROFILE("GravityPlugin::PreUpdate");
 
-  if (_info.paused)
-    return;
-
   if (!this->impl->validConfig)
     return;
 
-  double G = 6.67430E-11;
-  double mass_earth = 5.972E24;
-
-  // hardcoded masses
-  double mass_C = mass_earth * 1.0E-10;
-  double mass_B = 1.0;
-
-  // world pose of central mass
-  auto X_WC = math::Pose3d(0, 0, 0, 0, 0, 0);
-
-  // world pose of body base_link
-  auto X_WB = worldPose(this->impl->link.Entity(), _ecm);
-
-  // position vector from central mass to body
-  auto p_CB_W = X_WB.Pos() - X_WC.Pos();
-
-  // length of position vector
-  double r = p_CB_W.Length();
-  if (std::abs(r) < 1.0E-3)
+  if (!this->impl->initialised)
   {
+    // resolve source model
+    this->impl->sourceModel = Model(
+        this->impl->world.ModelByName(_ecm, this->impl->sourceName));
+    static bool notified{false};
+    if (!this->impl->sourceModel.Valid(_ecm) && !notified)
+    {
+      gzerr << "GravityPlugin: source model ["
+              << this->impl->sourceName
+              << "] not found. "
+              "Failed to initialize.\n";
+      notified = true;
       return;
+    }
+    this->impl->initialised = true;
   }
 
-  double one_over_r = 1.0 / r;
-  double one_over_r2 = 1.0 / (r * r);
-  // double one_over_r3 = 1.0 / (r * r * r);
+  if (!this->impl->initialised || _info.paused)
+    return;
 
-  // magnitude of force
-  auto f = 1.0 * G * mass_C * mass_B * one_over_r2;
+  // canonical link of gravity source (C for central force)
+  auto link_C = Link(this->impl->sourceModel.CanonicalLink(_ecm));
 
-  // direction of force
-  auto direction = -1.0 * one_over_r * p_CB_W;
+  // world pose of source
+  auto X_WC = worldPose(link_C.Entity(), _ecm);
 
-  // force
-  auto f_B_W = f * direction;
-
-  // apply force at CoM
-  this->impl->link.AddWorldForce(_ecm, f_B_W);
-
-  // debug
-  if (this->impl->debug)
+  // mass of source
+  auto *inertialComp_C = _ecm.Component<components::Inertial>(link_C.Entity());
   {
-    auto v_WB_W = this->impl->link.WorldLinearVelocity(_ecm).value();
-    double v = v_WB_W.Length();
-
-    auto a_WB_W = this->impl->link.WorldLinearAcceleration(_ecm).value();
-    double a = a_WB_W.Length();
-
-    gzdbg << "p_CB_W: " << p_CB_W << "\n";
-    gzdbg << "v_WB_W: " << v_WB_W << "\n";
-    gzdbg << "a_WB_W: " << a_WB_W << "\n";
-    gzdbg << "mass_C: " << mass_C << "\n";
-    gzdbg << "mass_B: " << mass_B << "\n";
-    gzdbg << "r:      " << r << "\n";
-    gzdbg << "v:      " << v << "\n";
-    gzdbg << "a:      " << a << "\n";
-    gzdbg << "f:      " << f << "\n";
-    gzdbg << "f_B_W:  " << f_B_W << "\n";
+    static bool notified{false};
+    if (inertialComp_C == nullptr)
+    {
+      gzerr << "GravityPlugin: source model ["
+              << this->impl->sourceName
+              << "] does not have valid inertial. "
+              "Failed to initialize.\n";
+      notified = true;
+      return;
+    }
   }
+  const auto &inertial_C = inertialComp_C->Data();
+  double mass_C = inertial_C.MassMatrix().Mass();
+
+  // loop over all links
+  _ecm.Each<components::Link>(
+      [&](const Entity &_entity,
+          const components::Link *) -> bool
+  {
+    Link link_B(_entity);
+
+    /// @todo(srmainwaring) add check that gravity is enabled for link.
+
+    // mass of link
+    auto *inertialComp_B =
+        _ecm.Component<components::Inertial>(link_B.Entity());
+    if (inertialComp_B == nullptr)
+    {
+      return true;
+    }
+    const auto &inertial_B = inertialComp_B->Data();
+    double mass_B = inertial_B.MassMatrix().Mass();
+
+    // world pose of link
+    auto X_WB = worldPose(_entity, _ecm);
+
+    // position vector from central mass to body
+    auto p_CB_W = X_WB.Pos() - X_WC.Pos();
+
+    // length of position vector
+    double r = p_CB_W.Length();
+
+    // avoid singularity as r -> 0
+    if (std::abs(r) < 1.0E-3)
+    {
+      return true;
+    }
+
+    // inverse radius
+    double one_over_r = 1.0 / r;
+    double one_over_r2 = 1.0 / (r * r);
+
+    // magnitude of force
+    auto f = 1.0 * this->impl->G * mass_C * mass_B * one_over_r2;
+
+    // direction of force
+    auto direction = -1.0 * one_over_r * p_CB_W;
+
+    // force
+    auto f_B_W = f * direction;
+
+    // apply force at CoM
+    link_B.AddWorldForce(_ecm, f_B_W);
+
+    // debug
+    if (this->impl->debug)
+    {
+      // enable velocity and acceleration components
+      link_B.EnableVelocityChecks(_ecm, true);
+      link_B.EnableAccelerationChecks(_ecm, true);
+
+      auto v_WB_W = link_B.WorldLinearVelocity(_ecm).value();
+      double v = v_WB_W.Length();
+
+      auto a_WB_W = link_B.WorldLinearAcceleration(_ecm).value();
+      double a = a_WB_W.Length();
+
+      gzdbg << "p_CB_W: " << p_CB_W << "\n";
+      gzdbg << "v_WB_W: " << v_WB_W << "\n";
+      gzdbg << "a_WB_W: " << a_WB_W << "\n";
+      gzdbg << "mass_C: " << mass_C << "\n";
+      gzdbg << "mass_B: " << mass_B << "\n";
+      gzdbg << "r:      " << r << "\n";
+      gzdbg << "v:      " << v << "\n";
+      gzdbg << "a:      " << a << "\n";
+      gzdbg << "f:      " << f << "\n";
+      gzdbg << "f_B_W:  " << f_B_W << "\n";
+    }
+
+    return true;
+  });
 }
 
 //////////////////////////////////////////////////
