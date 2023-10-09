@@ -24,6 +24,12 @@
       name="gz::sim::systems::Imu">
     </plugin>
 
+    <plugin filename="GravityPlugin"
+      name="GravityPlugin">
+      <debug>0</debug>
+      <source>earth</source>
+    </plugin>
+
     <!-- disable planar gravity -->
     <gravity>0 0 0</gravity>
 
@@ -101,9 +107,22 @@
       </link>
     </model>
 
+    <!-- source of gravity -->
     <model name="earth">
-      <static>true</static>
+      <static>0</static>
       <link name="earth">
+        <gravity>0</gravity>
+        <inertial>
+          <mass>5.972E14</mass>
+          <inertia>
+            <ixx>2.38880E+16</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>2.38880E+16</iyy>
+            <iyz>0</iyz>
+            <izz>2.38880E+16</izz>
+          </inertia>
+        </inertial>
         <collision name="collision">
           <pose degrees="true">0 0 0 90 0 0</pose>
           <geometry>
@@ -126,11 +145,19 @@
           </material>
         </visual>
       </link>
+
+      <plugin filename="gz-sim-velocity-control-system"
+        name="gz::sim::systems::VelocityControl">
+        <initial_angular>0 0 -0.1</initial_angular>
+      </plugin>
+
     </model>
 
-    <model name="satellite">
+    <!-- red satellite in equatorial orbit -->
+    <model name="satellite1">
       <pose>-15 0 0 0 0 0</pose>
       <link name="base_link">
+        <gravity>1</gravity>
         <inertial>
           <mass>1.0</mass>
           <inertia>
@@ -165,24 +192,73 @@
         </visual>
       </link>
 
-      <plugin name="GravityPlugin"
-        filename="GravityPlugin">
-        <link>base_link</link>
-      </plugin>
-
-      <plugin name="InitialVelocityPlugin"
-        filename="InitialVelocityPlugin">
+      <plugin filename="InitialVelocityPlugin"
+        name="InitialVelocityPlugin">
+        <debug>0</debug>
         <linear>0 51.55 0</linear>
         <link>base_link</link>
-        <p_gain>100</p_gain>
-        <i_gain>0</i_gain>
+        <p_gain>50</p_gain>
+        <i_gain>1</i_gain>
         <d_gain>0</d_gain>
-        <i_max>1</i_max>
-        <i_min>-1</i_min>
+        <i_max>10</i_max>
+        <i_min>-10</i_min>
         <cmd_min>-1000</cmd_min>
         <cmd_max>1000</cmd_max>
       </plugin>
+    </model>
 
+    <!-- blue satellite in polar orbit -->
+    <model name="satellite2">
+      <pose>0 0 20 0 0 0</pose>
+      <link name="base_link">
+        <gravity>1</gravity>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0</iyz>
+            <izz>0.1</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose degrees="true">0 0 0 90 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <pose degrees="true">0 0 0 90 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.0 0.0 1.0</ambient>
+            <diffuse>0.0 0.0 1.0</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+          </material>
+        </visual>
+      </link>
+
+      <plugin filename="InitialVelocityPlugin"
+        name="InitialVelocityPlugin">
+        <debug>0</debug>
+        <linear>-44.64 0 0</linear>
+        <link>base_link</link>
+        <p_gain>50</p_gain>
+        <i_gain>1</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>10</i_max>
+        <i_min>-10</i_min>
+        <cmd_min>-1000</cmd_min>
+        <cmd_max>1000</cmd_max>
+      </plugin>
     </model>
 
   </world>

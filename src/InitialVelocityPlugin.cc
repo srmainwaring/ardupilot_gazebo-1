@@ -67,16 +67,26 @@ class InitialVelocityPlugin::Impl
   /// \brief Flag set to true if the model is correctly initialised.
   public: bool validConfig{false};
 
-  /// \brief Linear velocity of a model
+  /// \brief Target initial linear world velocity
   public: math::Vector3d linearVelocity{0, 0, 0};
 
-  /// \brief Velocity PID controllers.
+  /// \brief Velocity-X PID controller.
   public: math::PID velXPid;
+
+  /// \brief Velocity-Y PID controller.
   public: math::PID velYPid;
+
+  /// \brief Velocity-Z PID controller.
   public: math::PID velZPid;
 
+  /// \brief Max number of iterations for initial impulse.
   public: int maxIter{100};
+
+  /// \brief Number of iterations for initial impulse.
   public: int iter{0};
+
+  /// \brief Flag set to true for additional debug messages.
+  public: bool debug{false};
 };
 
 //////////////////////////////////////////////////
@@ -167,16 +177,23 @@ void InitialVelocityPlugin::Configure(
   this->impl->velYPid.Init(p, i, d, iMax, iMin, cmdMax, cmdMin, cmdOffset);
   this->impl->velZPid.Init(p, i, d, iMax, iMin, cmdMax, cmdMin, cmdOffset);
 
-  gzdbg << "PID parameters:\n";
-  gzdbg << "p_gain: ["     << p         << "]\n";
-  gzdbg << "i_gain: ["     << i         << "]\n";
-  gzdbg << "d_gain: ["     << d         << "]\n";
-  gzdbg << "i_max: ["      << iMax      << "]\n";
-  gzdbg << "i_min: ["      << iMin      << "]\n";
-  gzdbg << "cmd_max: ["    << cmdMax    << "]\n";
-  gzdbg << "cmd_min: ["    << cmdMin    << "]\n";
-  gzdbg << "cmd_offset: [" << cmdOffset << "]\n";
+  if (_sdf->HasElement("debug"))
+  {
+    this->impl->debug = _sdf->Get<bool>("debug");
+  }
 
+  if (this->impl->debug)
+  {
+    gzdbg << "PID parameters:\n";
+    gzdbg << "p_gain: ["     << p         << "]\n";
+    gzdbg << "i_gain: ["     << i         << "]\n";
+    gzdbg << "d_gain: ["     << d         << "]\n";
+    gzdbg << "i_max: ["      << iMax      << "]\n";
+    gzdbg << "i_min: ["      << iMin      << "]\n";
+    gzdbg << "cmd_max: ["    << cmdMax    << "]\n";
+    gzdbg << "cmd_min: ["    << cmdMin    << "]\n";
+    gzdbg << "cmd_offset: [" << cmdOffset << "]\n";
+  }
 
   this->impl->link.EnableVelocityChecks(_ecm, true);
 
@@ -190,10 +207,7 @@ void InitialVelocityPlugin::PreUpdate(
 {
   GZ_PROFILE("InitialVelocityPlugin::PreUpdate");
 
-  if (_info.paused)
-    return;
-
-  if (!this->impl->validConfig)
+  if (!this->impl->validConfig || _info.paused)
     return;
 
   if (this->impl->iter > this->impl->maxIter)
@@ -217,7 +231,16 @@ void InitialVelocityPlugin::PreUpdate(
   // apply force at CoM
   this->impl->link.AddWorldForce(_ecm, f_B_W);
 
-
+  if (this->impl->debug)
+  {
+    gzdbg << "iter:   " << this->impl->iter << "\n";
+    gzdbg << "errorX: " << errorX << "\n";
+    gzdbg << "errorY: " << errorY << "\n";
+    gzdbg << "errorZ: " << errorZ << "\n";
+    gzdbg << "forceX: " << forceX << "\n";
+    gzdbg << "forceY: " << forceY << "\n";
+    gzdbg << "forceZ: " << forceZ << "\n";
+  }
 }
 
 //////////////////////////////////////////////////

@@ -26,7 +26,7 @@ namespace sim {
 inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
 
-/// \brief Gravity plugin.
+/// \brief A world plugin for Gravity as a central force.
 class GravityPlugin :
     public System,
     public ISystemPreUpdate,
