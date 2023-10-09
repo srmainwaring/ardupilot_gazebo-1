@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.9">
-  <world name="iris_runway">
+  <world name="earth">
     <physics name="1ms" type="ignore">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
@@ -250,6 +250,60 @@
         name="InitialVelocityPlugin">
         <debug>0</debug>
         <linear>-44.64 0 0</linear>
+        <link>base_link</link>
+        <p_gain>50</p_gain>
+        <i_gain>1</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>10</i_max>
+        <i_min>-10</i_min>
+        <cmd_min>-1000</cmd_min>
+        <cmd_max>1000</cmd_max>
+      </plugin>
+    </model>
+
+    <!-- green satellite in elliptical orbit -->
+    <model name="satellite3">
+      <pose>10 0 10 0 0 0</pose>
+      <link name="base_link">
+        <gravity>1</gravity>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0</iyz>
+            <izz>0.1</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose degrees="true">0 0 0 90 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <pose degrees="true">0 0 0 90 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.0</ambient>
+            <diffuse>0.0 1.0 0.0</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+          </material>
+        </visual>
+      </link>
+
+      <plugin filename="InitialVelocityPlugin"
+        name="InitialVelocityPlugin">
+        <debug>0</debug>
+        <linear>0 65.0 0</linear>
         <link>base_link</link>
         <p_gain>50</p_gain>
         <i_gain>1</i_gain>
