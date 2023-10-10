@@ -65,9 +65,6 @@ class GravityPlugin::Impl
 
   /// \brief Universal gravitational constant (N m^2 / kg^2).
   public: static constexpr double G{6.67430E-11};
-
-  /// \brief Mass of earth (kg).
-  //public: static constexpr double massEarth{5.972E24};
 };
 
 //////////////////////////////////////////////////
