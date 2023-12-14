@@ -16,6 +16,8 @@
 */
 #include "ArduPilotPlugin.hh"
 
+#include <gz/msgs/actuators.pb.h>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -108,7 +110,8 @@ class Control
   ///   VELOCITY control velocity of joint
   ///   POSITION control position of joint
   ///   EFFORT control effort of joint
-  ///   COMMAND control sends command to topic
+  ///   COMMAND control sends command message (msgs::Double) to topic
+  ///   ACTUATORS control sends actuators message (msgs::Double) to topic
   public: std::string type;
 
   /// \brief Use force controller
@@ -372,6 +375,12 @@ class gz::sim::systems::ArduPilotPluginPrivate
       gzdbg << "Plugin received signal[" << _sig  << "]\n";
       this->signal = _sig;
   }
+
+  /// \brief The name of the actuators topic to forward this command
+  public: std::string actuatorsTopic;
+
+  /// \brief Publisher for sending actuator messages
+  public: gz::transport::Node::Publisher actuatorsPub;
 };
 
 /////////////////////////////////////////////////
@@ -576,12 +585,13 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
     if (control.type != "VELOCITY" &&
         control.type != "POSITION" &&
         control.type != "EFFORT" &&
-        control.type != "COMMAND")
+        control.type != "COMMAND" &&
+        control.type != "ACTUATORS")
     {
       gzwarn << "[" << this->dataPtr->modelName << "] "
              << "Control type [" << control.type
              << "] not recognized, must be one of"
-             << "VELOCITY, POSITION, EFFORT, COMMAND."
+             << "VELOCITY, POSITION, EFFORT, COMMAND, ACTUATORS."
              << " default to VELOCITY.\n";
       control.type = "VELOCITY";
     }
@@ -635,6 +645,31 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
         << "Advertising on " << control.cmdTopic << ".\n";
       control.pub = this->dataPtr->
           node.Advertise<msgs::Double>(control.cmdTopic);
+    }
+
+    // set up publisher if using actuator messages (do once)
+    if (control.type == "ACTUATORS" && !this->dataPtr->actuatorsPub)
+    {
+      if (_sdf->HasElement("actuators_topic"))
+      {
+        this->dataPtr->actuatorsTopic =
+          controlSDF->Get<std::string>("actuators_topic");
+      }
+      else
+      {
+        this->dataPtr->actuatorsTopic =
+            "/world/" + this->dataPtr->worldName
+          + "/model/" + this->dataPtr->modelName
+          + "/actuators/cmd";
+        gzwarn << "[" << this->dataPtr->modelName << "] "
+            << "Control type [" << control.type
+            << "] requires a valid <actutors_topic>. Using default\n";
+      }
+      
+      gzmsg << "[" << this->dataPtr->modelName << "] "
+        << "Advertising on " << this->dataPtr->actuatorsTopic << ".\n";
+      this->dataPtr->actuatorsPub = this->dataPtr->
+          node.Advertise<msgs::Actuators>(this->dataPtr->actuatorsTopic);
     }
 
     if (controlSDF->HasElement("multiplier"))
@@ -1296,6 +1331,9 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
     const double _dt,
     gz::sim::EntityComponentManager &_ecm)
 {
+  // populated if using the control type ACTUATORS 
+  msgs::Actuators actuators;
+
   // update velocity PID for controls and apply force to joint
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
   {
@@ -1305,6 +1343,14 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
       msgs::Double cmd;
       cmd.set_data(this->dataPtr->controls[i].cmd);
       this->dataPtr->controls[i].pub.Publish(cmd);
+      continue;
+    }
+
+    // Populate the slot in the actuator message
+    if (this->dataPtr->controls[i].type == "ACTUATORS")
+    {
+      //! @todo(srmainwaring) populate the actuators slot for this control 
+      //actuators.set_data(this->dataPtr->controls[i].cmd);
       continue;
     }
 
@@ -1398,6 +1444,12 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
         // do nothing
       }
     }
+  }
+
+  // publish actuators if configured
+  if (this->dataPtr->actuatorsPub)
+  {
+    this->dataPtr->actuatorsPub.Publish(actuators);
   }
 }
 
