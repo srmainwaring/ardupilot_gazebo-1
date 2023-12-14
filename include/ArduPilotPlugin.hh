@@ -62,7 +62,8 @@ class ArduPilotPluginPrivate;
 ///    <servo_max>        upper limit for PWM input
 ///    <servo_min>        lower limit for PWM input
 ///    <!-- output to Gazebo -->
-///    <type>             type of control, VELOCITY, POSITION, EFFORT or COMMAND
+///    <type>             type of control, VELOCITY, POSITION, EFFORT,
+///                       COMMAND or ACTUATORS.
 ///    <useForce>         1 if joint forces are applied, 0 to set joint directly
 ///    <p_gain>           velocity pid p gain
 ///    <i_gain>           velocity pid i gain
