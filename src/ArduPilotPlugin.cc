@@ -26,6 +26,7 @@
 
 #include <chrono>
 #include <functional>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <sstream>
@@ -141,6 +142,14 @@ class Control
   ///
   /// The upper limit of PWM input should match SERVOX_MAX for this channel.
   public: double servo_max = 2000.0;
+
+  //! @todo(srmainwaring) use the control index. 
+  /// \brief Index of the actuator. Valid if type = "ACTUATORS".
+  // public: int actuatorNumber;
+
+  //! @todo(srmainwaring) implement - currently assuming velocity. 
+  /// \brief Type of the actuator. Valid if type = "ACTUATORS".
+  // public: std::string actuatorType;
 
   /// \brief Publisher for sending commands
   public: gz::transport::Node::Publisher pub;
@@ -1331,8 +1340,15 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
     const double _dt,
     gz::sim::EntityComponentManager &_ecm)
 {
+  //! @todo(srmainwaring) would be better to not allocate every update...
   // populated if using the control type ACTUATORS 
   msgs::Actuators actuators;
+  if (this->dataPtr->actuatorsPub)
+  {
+    actuators.mutable_velocity()->Resize(
+      this->dataPtr->controls.size(),
+      std::numeric_limits<double>::quiet_NaN() );
+  }
 
   // update velocity PID for controls and apply force to joint
   for (size_t i = 0; i < this->dataPtr->controls.size(); ++i)
@@ -1349,8 +1365,7 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
     // Populate the slot in the actuator message
     if (this->dataPtr->controls[i].type == "ACTUATORS")
     {
-      //! @todo(srmainwaring) populate the actuators slot for this control 
-      //actuators.set_data(this->dataPtr->controls[i].cmd);
+      actuators.mutable_velocity()->Set(i, this->dataPtr->controls[i].cmd);
       continue;
     }
 
