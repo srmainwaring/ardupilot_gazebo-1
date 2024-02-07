@@ -156,6 +156,10 @@
         </axis>
       </joint>
 
+      <plugin name="gz::sim::systems::Label"
+        filename="gz-sim-label-system">
+        <label>20</label>
+      </plugin>
       <plugin name="gz::sim::systems::JointStatePublisher"
         filename="gz-sim-joint-state-publisher-system">
       </plugin>
@@ -192,11 +196,17 @@
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak tree</uri>
     <name>oak_tree0</name>
     <pose>10 10 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>30</label>
+    </plugin>
   </include>
   <include>
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak tree</uri>
     <name>oak_tree1</name>
     <pose>8 15 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>30</label>
+    </plugin>
   </include>
 
   <!-- @online{GazeboFuel-OpenRobotics-Pine-Tree,
@@ -212,16 +222,25 @@
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine Tree</uri>
     <name>pine_tree0</name>
     <pose>15 -15 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>31</label>
+    </plugin>
   </include>
   <include>
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine Tree</uri>
     <name>pine_tree1</name>
     <pose>10 -20 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>31</label>
+    </plugin>
   </include>
   <include>
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine Tree</uri>
     <name>pine_tree2</name>
     <pose>12 -10 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>31</label>
+    </plugin>
   </include>
 
   <!-- @online{GazeboFuel-OpenRobotics-ground_station,
@@ -237,6 +256,9 @@
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/ground_station</uri>
     <name>ground_station</name>
     <pose>10 0 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>45</label>
+    </plugin>
   </include>
 
   <!-- @online{GazeboFuel-OpenRobotics-Walking-person,
@@ -252,6 +274,9 @@
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Walking person</uri>
     <name>walking_person0</name>
     <pose>8 2 0 0 0 0</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>50</label>
+    </plugin>
   </include>
 
   <!-- @online{GazeboFuel-plateau-Casual-female,
@@ -267,6 +292,9 @@
     <uri>https://fuel.gazebosim.org/1.0/plateau/models/Casual female</uri>
     <name>casual_female0</name>
     <pose degrees="true">6 -4 0 0 0 145</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>55</label>
+    </plugin>
   </include>
 
   <!-- @online{GazeboFuel-OpenRobotics-Prius-Hybrid,
@@ -282,6 +310,9 @@
     <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Prius Hybrid</uri>
     <name>prius_hybrid0</name>
     <pose degrees="true">0 7 0 0 0 40</pose>
+    <plugin filename="gz-sim-label-system" name="gz::sim::systems::Label">
+      <label>60</label>
+    </plugin>
   </include>
 
   </world>
