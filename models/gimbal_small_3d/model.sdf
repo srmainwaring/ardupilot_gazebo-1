@@ -188,8 +188,14 @@
           </cylinder>
         </geometry>
       </collision>
-      <sensor name="camera" type="camera">
-        <pose>0 0 0 -1.57 -1.57 0</pose>
+
+      <!-- zoom camera -->
+      <sensor name="zoom_camera" type="camera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>zoom_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
         <camera>
           <horizontal_fov>2.0</horizontal_fov>
           <image>
@@ -201,17 +207,228 @@
             <far>15000</far>
           </clip>
         </camera>
-        <always_on>1</always_on>
-        <update_rate>10</update_rate>
-        <visualize>1</visualize>
-
         <plugin filename="CameraZoomPlugin"
             name="CameraZoomPlugin">
           <max_zoom>125.0</max_zoom>
           <slew_rate>0.42514285714</slew_rate>
         </plugin>
-
       </sensor>
+
+      <!-- depth camera from sensors_demo.sdf -->
+      <sensor name="depth_camera1" type="depth_camera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <enable_metrics>1</enable_metrics>
+        <topic>depth_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <horizontal_fov>1.05</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+            <format>R_FLOAT32</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <!-- rgbd camera from sensors_demo.sdf -->
+      <sensor name="rgbd_camera" type="rgbd_camera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <enable_metrics>1</enable_metrics>
+        <topic>rgbd_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <!-- thermal camera from sensors_demo.sdf -->
+      <sensor name="thermal_camera" type="thermal_camera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>thermal_camera</topic>
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <!-- thermal sensor from thermal_camera.sdf -->
+      <sensor name="thermal_sensor" type="thermal">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>thermal</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+            <format>L16</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+      </sensor>
+      
+      <!-- wide angle camera from wide_angle_camera.sdf -->
+      <sensor name="wideangle_camera" type="wideanglecamera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>wide_angle_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <horizontal_fov>3.14</horizontal_fov>
+          <image>
+            <width>800</width>
+            <height>600</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+          <lens>
+            <type>custom</type>
+            <!-- manually defined mapping function r = c1*f*fun(theta/c2 + c3) -->
+            <!-- More information here: https://en.wikipedia.org/wiki/Fisheye_lens#Mapping_function -->
+            <custom_function>
+              <c1>1.05</c1>
+              <!-- linear scaling -->
+              <c2>4</c2>
+              <!-- angle scaling -->
+              <f>1.0</f>
+              <!-- one more scaling parameter -->
+              <fun>tan</fun>
+              <!-- one of sin,tan,id -->
+            </custom_function>
+            <!-- if it is set to `true` your horizontal FOV will ramain as defined -->
+            <!-- othervise it depends on lens type and custom function, if there is one -->
+            <scale_to_hfov>true</scale_to_hfov>
+            <!-- clip everything that is outside of this angle -->
+            <cutoff_angle>3.1415</cutoff_angle>
+            <!-- resolution of the cubemap texture, the highter it is - the sharper is your image -->
+            <env_texture_size>512</env_texture_size>
+          </lens>
+        </camera>
+      </sensor>
+
+      <!--  bounding box camera bounding_box_3d_camera_sensor_builtin.sdf -->
+      <sensor name="boundingbox_camera" type="boundingbox_camera">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>boundingbox_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <box_type>3d</box_type>
+          <image>
+              <width>320</width>
+              <height>240</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>1000.0</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <!-- logical camera from logical_camera_sensor.sdf -->
+      <sensor name='logical_camera' type='logical_camera'>"
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <enable_metrics>1</enable_metrics>
+        <topic>logical_camera</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <logical_camera>
+          <near>0.55</near>
+          <far>5</far>
+          <horizontal_fov>1.04719755</horizontal_fov>
+          <aspect_ratio>1.778</aspect_ratio>
+        </logical_camera>
+      </sensor>
+
+      <!-- instance segmentation camera from segmentation_camera.sdf -->
+      <sensor name="instance_segmentation_camera" type="segmentation">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>panoptic</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <segmentation_type>instance</segmentation_type>
+          <horizontal_fov>1.57</horizontal_fov>
+          <image>
+            <width>800</width>
+            <height>600</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+          <!-- uncomment these lines to save segmentation data -->
+          <!--
+          <save enabled="true">
+            <path>segmentation_data/instance_camera</path>
+          </save>
+          -->
+        </camera>
+      </sensor>
+
+      <!-- semantic segmentation camera from segmentation_camera.sdf -->
+      <sensor name="semantic_segmentation_camera" type="segmentation">
+        <pose degrees="true">0 0 0 -90 -90 0</pose>
+        <always_on>1</always_on>
+        <topic>semantic</topic>
+        <update_rate>10</update_rate>
+        <visualize>1</visualize>
+        <camera>
+          <segmentation_type>semantic</segmentation_type>
+          <horizontal_fov>1.57</horizontal_fov>
+          <image>
+            <width>800</width>
+            <height>600</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+          <!-- uncomment these lines to save segmentation data -->
+          <!--
+          <save enabled="true">
+            <path>segmentation_data/semantic_camera</path>
+          </save>
+          -->
+        </camera>
+      </sensor>      
     </link>
     <joint name="pitch_joint" type="revolute">
       <parent>roll_link</parent>
