@@ -75,6 +75,7 @@ class ArduPilotPluginPrivate;
 ///    <jointName>        motor joint, torque applied here
 ///    <cmd_topic>        topic to publish commands that are processed
 ///                       by other plugins
+///    <actuators_topic>  topic to publish actuator messages to
 ///
 ///    <turningDirection> rotor turning direction, 'cw' or 'ccw'
 ///    <frequencyCutoff>  filter incoming joint state

@@ -112,7 +112,7 @@ class Control
   ///   POSITION control position of joint
   ///   EFFORT control effort of joint
   ///   COMMAND control sends command message (msgs::Double) to topic
-  ///   ACTUATORS control sends actuators message (msgs::Double) to topic
+  ///   ACTUATORS control sends actuators message to topic
   public: std::string type;
 
   /// \brief Use force controller
@@ -659,7 +659,7 @@ void gz::sim::systems::ArduPilotPlugin::LoadControlChannels(
     // set up publisher if using actuator messages (do once)
     if (control.type == "ACTUATORS" && !this->dataPtr->actuatorsPub)
     {
-      if (_sdf->HasElement("actuators_topic"))
+      if (controlSDF->HasElement("actuators_topic"))
       {
         this->dataPtr->actuatorsTopic =
           controlSDF->Get<std::string>("actuators_topic");
