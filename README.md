@@ -236,7 +236,8 @@ View the streamed camera frames in [QGC](http://qgroundcontrol.com/):
 
 `Open QGC > Application Settings > Video Settings > Select UDP h.264 Video Stream & use port 5600`
 
-![QGC settings](https://private-user-images.githubusercontent.com/74557164/344478908-f55242f3-cff8-4f81-befd-da68e4df73c6.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MTk3NjQwODUsIm5iZiI6MTcxOTc2Mzc4NSwicGF0aCI6Ii83NDU1NzE2NC8zNDQ0Nzg5MDgtZjU1MjQyZjMtY2ZmOC00ZjgxLWJlZmQtZGE2OGU0ZGY3M2M2LnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDA2MzAlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQwNjMwVDE2MDk0NVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTkxYjlmYTkwODFiZmMyY2NjMjVjMWZhNjk1NDZhYjUzOTM1YWUzNjI3ZDljZTQ3NmYzM2I4M2JmNzg5ZGY5MmMmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JmFjdG9yX2lkPTAma2V5X2lkPTAmcmVwb19pZD0wIn0.48sEOYbBONNEA-0qYevB7z_NleKW_zL-hNSefu5UYaQ)
+![QGC settings](https://github.com/snktshrma/ardupilot_gazebo_ap/assets/74557164/bf516886-e129-4b94-ae0a-94a3288c7193)
+
 
 ### 4. Using 3d Gimbal
 
