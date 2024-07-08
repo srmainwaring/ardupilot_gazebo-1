@@ -88,6 +88,7 @@
       </sensor>
     </link>
 
+    <!-- wheels - for type ball, the friction element has no effect -->
     <link name="wheel_1_link">
       <pose>0.15 0.15 -0.022 0 0 0</pose>
       <inertial>
@@ -529,40 +530,36 @@
     </joint>
 
     <!-- plugins -->
-    <plugin filename="gz-sim-joint-state-publisher-system"
-      name="gz::sim::systems::JointStatePublisher">
+    <plugin name="gz::sim::systems::JointStatePublisher"
+      filename="gz-sim-joint-state-publisher-system">
     </plugin>
 
-    <plugin
-      filename="gz-sim-joint-controller-system"
-      name="gz::sim::systems::JointController">
+    <plugin name="gz::sim::systems::JointController"
+      filename="gz-sim-joint-controller-system">
       <joint_name>motor_1_joint</joint_name>
       <use_force_commands>1</use_force_commands>
       <topic>/model/omnifancar/joint/motor_1_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.01</p_gain>
     </plugin>
-    <plugin
-      filename="gz-sim-joint-controller-system"
-      name="gz::sim::systems::JointController">
+    <plugin name="gz::sim::systems::JointController"
+      filename="gz-sim-joint-controller-system">
       <joint_name>motor_2_joint</joint_name>
       <use_force_commands>1</use_force_commands>
       <topic>/model/omnifancar/joint/motor_2_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.01</p_gain>
     </plugin>
-    <plugin
-      filename="gz-sim-joint-controller-system"
-      name="gz::sim::systems::JointController">
+    <plugin name="gz::sim::systems::JointController"
+      filename="gz-sim-joint-controller-system">
       <joint_name>motor_3_joint</joint_name>
       <use_force_commands>1</use_force_commands>
       <topic>/model/omnifancar/joint/motor_3_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.01</p_gain>
     </plugin>
-    <plugin
-      filename="gz-sim-joint-controller-system"
-      name="gz::sim::systems::JointController">
+    <plugin name="gz::sim::systems::JointController"
+      filename="gz-sim-joint-controller-system">
       <joint_name>motor_4_joint</joint_name>
       <use_force_commands>1</use_force_commands>
       <topic>/model/omnifancar/joint/motor_4_joint/cmd_vel</topic>
@@ -571,8 +568,8 @@
     </plugin>
 
     <!-- motor 1 ccw -->
-    <plugin filename="gz-sim-lift-drag-system"
-      name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -588,8 +585,8 @@
       <upward>0 0 1</upward>
       <link_name>motor_1_link</link_name>
     </plugin>
-    <plugin filename="gz-sim-lift-drag-system"
-      name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -607,8 +604,8 @@
     </plugin>
 
     <!-- motor 2 cw -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -624,8 +621,8 @@
       <upward>0 0 1</upward>
       <link_name>motor_2_link</link_name>
     </plugin>
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -643,8 +640,8 @@
     </plugin>
 
     <!-- motor 3 ccw -->
-    <plugin filename="gz-sim-lift-drag-system"
-      name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -660,8 +657,8 @@
       <upward>0 0 1</upward>
       <link_name>motor_3_link</link_name>
     </plugin>
-    <plugin filename="gz-sim-lift-drag-system"
-      name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -679,8 +676,8 @@
     </plugin>
 
     <!-- motor 4 cw -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
@@ -696,8 +693,8 @@
       <upward>0 0 1</upward>
       <link_name>motor_4_link</link_name>
     </plugin>
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
+    <plugin name="gz::sim::systems::LiftDrag"
+      filename="gz-sim-lift-drag-system">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
       <cla>4.2500</cla>
