@@ -1,0 +1,39 @@
+<sdf version="1.7">
+  <model name="omnifancar">
+    <link name="base_link">
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.009375</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.009375</iyy>
+          <iyz>0</iyz>
+          <izz>0.009375</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.4 0.4 0.004</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.4 0.4 0.004</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 0 0</ambient>
+          <diffuse>1 0 0</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+
+  </model>
+</sdf>
