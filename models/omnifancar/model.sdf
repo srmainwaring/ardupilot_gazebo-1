@@ -36,96 +36,450 @@
         </material>
       </visual>
 
-      <!-- wheels -->
-      <collision name="wheel_1_collision">
-        <pose>0.15 0.15 -0.022 0 0 0</pose>
+      <!-- frame -->
+      <visual name="frame_1_visual">
+        <pose degrees="true">0 0 0.202 0 90 0</pose>
         <geometry>
-          <sphere>
+          <cylinder>
             <radius>0.02</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <visual name="wheel_1_visual">
-        <pose>0.15 0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
+            <length>0.4</length>
+          </cylinder>
         </geometry>
         <material>
-          <ambient>0.5 0.5 0.5</ambient>
-          <diffuse>0.5 0.5 0.5</diffuse>
+          <ambient>0.1 0.1 0.1</ambient>
+          <diffuse>0.1 0.1 0.1</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+      <visual name="frame_2_visual">
+        <pose degrees="true">0 0 0.202 90 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.4</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1</ambient>
+          <diffuse>0.1 0.1 0.1</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+      <visual name="frame_3_visual">
+        <pose degrees="true">0 0 0.102 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.2</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1</ambient>
+          <diffuse>0.1 0.1 0.1</diffuse>
           <specular>0.1 0.1 0.1</specular>
         </material>
       </visual>
 
-      <collision name="wheel_2_collision">
-        <pose>-0.15 0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <visual name="wheel_2_visual">
-        <pose>-0.15 0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-        <material>
-          <ambient>0.5 0.5 0.5</ambient>
-          <diffuse>0.5 0.5 0.5</diffuse>
-          <specular>0.1 0.1 0.1</specular>
-        </material>
-      </visual>
-
-      <collision name="wheel_3_collision">
-        <pose>-0.15 -0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <visual name="wheel_3_visual">
-        <pose>-0.15 -0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-        <material>
-          <ambient>0.5 0.5 0.5</ambient>
-          <diffuse>0.5 0.5 0.5</diffuse>
-          <specular>0.1 0.1 0.1</specular>
-        </material>
-      </visual>
-
-      <collision name="wheel_4_collision">
-        <pose>0.15 -0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-      </collision>
-      <visual name="wheel_4_visual">
-        <pose>0.15 -0.15 -0.022 0 0 0</pose>
-        <geometry>
-          <sphere>
-            <radius>0.02</radius>
-          </sphere>
-        </geometry>
-        <material>
-          <ambient>0.5 0.5 0.5</ambient>
-          <diffuse>0.5 0.5 0.5</diffuse>
-          <specular>0.1 0.1 0.1</specular>
-        </material>
-      </visual>
+      <!-- senors -->
+      <sensor name="imu_sensor" type="imu">
+        <pose degrees="true">0 0 0 180 0 0</pose>
+        <always_on>1</always_on>
+        <update_rate>1000.0</update_rate>
+      </sensor>
 
     </link>
+
+    <link name="wheel_1_link">
+      <pose>0.15 0.15 -0.022 0 0 0</pose>
+      <inertial>
+        <mass>0.263056025</mass>
+        <inertia>
+          <ixx>4.20890E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.20890E-05</iyy>
+          <iyz>0</iyz>
+          <izz>4.20890E-05</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="wheel_1_joint" type="ball">
+      <parent>base_link</parent>
+      <child>wheel_1_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="wheel_2_link">
+      <pose>-0.15 0.15 -0.022 0 0 0</pose>
+      <inertial>
+        <mass>0.263056025</mass>
+        <inertia>
+          <ixx>4.20890E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.20890E-05</iyy>
+          <iyz>0</iyz>
+          <izz>4.20890E-05</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="wheel_2_joint" type="ball">
+      <parent>base_link</parent>
+      <child>wheel_2_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="wheel_3_link">
+      <pose>-0.15 -0.15 -0.022 0 0 0</pose>
+      <inertial>
+        <mass>0.263056025</mass>
+        <inertia>
+          <ixx>4.20890E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.20890E-05</iyy>
+          <iyz>0</iyz>
+          <izz>4.20890E-05</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="wheel_3_joint" type="ball">
+      <parent>base_link</parent>
+      <child>wheel_3_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="wheel_4_link">
+      <pose>0.15 -0.15 -0.022 0 0 0</pose>
+      <inertial>
+        <mass>0.263056025</mass>
+        <inertia>
+          <ixx>4.20890E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.20890E-05</iyy>
+          <iyz>0</iyz>
+          <izz>4.20890E-05</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="wheel_4_joint" type="ball">
+      <parent>base_link</parent>
+      <child>wheel_4_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="motor_1_link">
+      <pose degrees="true">0.21 0 0.202 0 90 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>1.33333E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.33333E-05</iyy>
+          <iyz>0</iyz>
+          <izz>0.00002</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="motor_1_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_1_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="motor_2_link">
+      <pose degrees="true">-0.21 0 0.202 0 -90 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>1.33333E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.33333E-05</iyy>
+          <iyz>0</iyz>
+          <izz>0.00002</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="motor_2_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_2_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="motor_3_link">
+      <pose degrees="true">0 0.21 0.202 -90 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>1.33333E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.33333E-05</iyy>
+          <iyz>0</iyz>
+          <izz>0.00002</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="motor_3_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_3_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <link name="motor_4_link">
+      <pose degrees="true">0 -0.21 0.202 90 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>1.33333E-05</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1.33333E-05</iyy>
+          <iyz>0</iyz>
+          <izz>0.00002</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5</ambient>
+          <diffuse>0.5 0.5 0.5</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+    </link>
+    <joint name="motor_4_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_4_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1.0e16</lower>
+          <upper>1.0e16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
 
   </model>
 </sdf>
