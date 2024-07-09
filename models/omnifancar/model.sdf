@@ -38,11 +38,11 @@
 
       <!-- frame -->
       <visual name="frame_1_visual">
-        <pose degrees="true">0 0 0.202 0 90 0</pose>
+        <pose degrees="true">0.1 0 0.202 0 90 0</pose>
         <geometry>
           <cylinder>
             <radius>0.02</radius>
-            <length>0.4</length>
+            <length>0.2</length>
           </cylinder>
         </geometry>
         <material>
@@ -52,11 +52,11 @@
         </material>
       </visual>
       <visual name="frame_2_visual">
-        <pose degrees="true">0 0 0.202 90 0 0</pose>
+        <pose degrees="true">-0.05 0.08660254 0.202 90 0 30</pose>
         <geometry>
           <cylinder>
             <radius>0.02</radius>
-            <length>0.4</length>
+            <length>0.2</length>
           </cylinder>
         </geometry>
         <material>
@@ -66,6 +66,20 @@
         </material>
       </visual>
       <visual name="frame_3_visual">
+        <pose degrees="true">-0.05 -0.086602545 0.202 90 0 -30</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.02</radius>
+            <length>0.2</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1</ambient>
+          <diffuse>0.1 0.1 0.1</diffuse>
+          <specular>0.1 0.1 0.1</specular>
+        </material>
+      </visual>
+      <visual name="frame_4_visual">
         <pose degrees="true">0 0 0.102 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -344,7 +358,7 @@
     </joint>
 
     <link name="motor_2_link">
-      <pose degrees="true">-0.21 0 0.202 0 -90 0</pose>
+      <pose degrees="true">-0.105 -0.181865 0.202 0 90 60</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -406,7 +420,7 @@
     </joint>
 
     <link name="motor_3_link">
-      <pose degrees="true">0 0.21 0.202 -90 0 0</pose>
+      <pose degrees="true">-0.105 0.181865 0.202 0 90 -60</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -467,68 +481,6 @@
       </axis>
     </joint>
 
-    <link name="motor_4_link">
-      <pose degrees="true">0 -0.21 0.202 90 0 0</pose>
-      <inertial>
-        <mass>0.1</mass>
-        <inertia>
-          <ixx>1.33333E-05</ixx>
-          <ixy>0</ixy>
-          <ixz>0</ixz>
-          <iyy>1.33333E-05</iyy>
-          <iyz>0</iyz>
-          <izz>0.00002</izz>
-        </inertia>
-      </inertial>
-      <collision name="collision">
-        <geometry>
-          <cylinder>
-            <radius>0.02</radius>
-            <length>0.02</length>
-          </cylinder>
-        </geometry>
-      </collision>
-      <visual name="visual">
-        <geometry>
-          <cylinder>
-            <radius>0.02</radius>
-            <length>0.02</length>
-          </cylinder>
-        </geometry>
-        <material>
-          <ambient>0.5 0.5 0.5</ambient>
-          <diffuse>0.5 0.5 0.5</diffuse>
-          <specular>0.1 0.1 0.1</specular>
-        </material>
-      </visual>
-      <visual name="prop_visual">
-        <geometry>
-          <mesh>
-            <uri>model://omnifancar/meshes/iris_prop_cw.dae</uri>
-          </mesh>
-        </geometry>
-        <material>
-          <ambient>0 1 0</ambient>
-          <diffuse>0 1 0</diffuse>
-          <specular>0.1 0.1 0.1</specular>
-        </material>
-      </visual>
-    </link>
-    <joint name="motor_4_joint" type="revolute">
-      <parent>base_link</parent>
-      <child>motor_4_link</child>
-      <axis>
-        <xyz>0 0 1</xyz>
-        <limit>
-          <lower>-1.0e16</lower>
-          <upper>1.0e16</upper>
-        </limit>
-        <dynamics>
-          <damping>0.004</damping>
-        </dynamics>
-      </axis>
-    </joint>
-
     <!-- plugins -->
     <plugin name="gz::sim::systems::JointStatePublisher"
       filename="gz-sim-joint-state-publisher-system">
@@ -555,14 +507,6 @@
       <joint_name>motor_3_joint</joint_name>
       <use_force_commands>1</use_force_commands>
       <topic>/model/omnifancar/joint/motor_3_joint/cmd_vel</topic>
-      <initial_velocity>0.0</initial_velocity>
-      <p_gain>0.01</p_gain>
-    </plugin>
-    <plugin name="gz::sim::systems::JointController"
-      filename="gz-sim-joint-controller-system">
-      <joint_name>motor_4_joint</joint_name>
-      <use_force_commands>1</use_force_commands>
-      <topic>/model/omnifancar/joint/motor_4_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.01</p_gain>
     </plugin>
@@ -675,42 +619,6 @@
       <link_name>motor_3_link</link_name>
     </plugin>
 
-    <!-- motor 4 cw -->
-    <plugin name="gz::sim::systems::LiftDrag"
-      filename="gz-sim-lift-drag-system">
-      <a0>0.3</a0>
-      <alpha_stall>1.4</alpha_stall>
-      <cla>4.2500</cla>
-      <cda>0.10</cda>
-      <cma>0.0</cma>
-      <cla_stall>-0.025</cla_stall>
-      <cda_stall>0.0</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <area>0.002</area>
-      <air_density>1.2041</air_density>
-      <cp>0.084 0 0</cp>
-      <forward>0 -1 0</forward>
-      <upward>0 0 1</upward>
-      <link_name>motor_4_link</link_name>
-    </plugin>
-    <plugin name="gz::sim::systems::LiftDrag"
-      filename="gz-sim-lift-drag-system">
-      <a0>0.3</a0>
-      <alpha_stall>1.4</alpha_stall>
-      <cla>4.2500</cla>
-      <cda>0.10</cda>
-      <cma>0.0</cma>
-      <cla_stall>-0.025</cla_stall>
-      <cda_stall>0.0</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <area>0.002</area>
-      <air_density>1.2041</air_density>
-      <cp>-0.084 0 0</cp>
-      <forward>0 1 0</forward>
-      <upward>0 0 1</upward>
-      <link_name>motor_4_link</link_name>
-    </plugin>
-
     <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
       <fdm_addr>127.0.0.1</fdm_addr>
       <fdm_port_in>9002</fdm_port_in>
@@ -752,17 +660,6 @@
         <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/model/omnifancar/joint/motor_3_joint/cmd_vel</cmd_topic>
-      </control>
-
-      <control channel="3">
-        <jointName>motor_4_joint</jointName>
-        <useForce>1</useForce>
-        <multiplier>-850</multiplier>
-        <offset>0</offset>
-        <servo_min>1000</servo_min>
-        <servo_max>2000</servo_max>
-        <type>COMMAND</type>
-        <cmd_topic>/model/omnifancar/joint/motor_4_joint/cmd_vel</cmd_topic>
       </control>
     </plugin>
 
