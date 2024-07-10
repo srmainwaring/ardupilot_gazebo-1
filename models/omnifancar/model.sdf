@@ -296,7 +296,7 @@
     </joint>
 
     <link name="motor_1_link">
-      <pose degrees="true">0.21 0 0.202 180 90 0</pose>
+      <pose degrees="true">0.21 0 0.202 180 90 -5</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -358,7 +358,7 @@
     </joint>
 
     <link name="motor_2_link">
-      <pose degrees="true">-0.105 -0.181865 0.202 0 90 60</pose>
+      <pose degrees="true">-0.105 -0.181865 0.202 0 90 65</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -420,7 +420,7 @@
     </joint>
 
     <link name="motor_3_link">
-      <pose degrees="true">-0.105 0.181865 0.202 0 90 -60</pose>
+      <pose degrees="true">-0.105 0.181865 0.202 0 90 -65</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
