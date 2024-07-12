@@ -36,6 +36,32 @@
         </material>
       </visual>
 
+      <!-- skid block for friction (ball joints have no friction atm -->
+      <collision name="skid_collision">
+        <pose>0 0 -0.022 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.04</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.1</mu>
+              <mu2>0.1</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <!-- <visual name="skid_visual">
+        <pose>0 0 -0.022 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.04 0.04 0.04</size>
+          </box>
+        </geometry>
+      </visual> -->
+
       <!-- frame -->
       <visual name="frame_1_visual">
         <pose degrees="true">0.1 0 0.202 0 90 0</pose>
