@@ -1,36 +1,31 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
   <model name="gress_rover">
-
-    <!--   BASE LINK    -->
-
     <link name='base_link'>
       <pose>0 0 0 0 0 0</pose>
       <inertial>
-        <pose>0 0 0 0 0 0</pose>
+        <pose degrees="true">0 0 0.25 90 0 90</pose>
         <mass>3.12</mass>
         <inertia>
-            <ixx>0.033764</ixx>
-            <ixy>0.0</ixy>
-            <ixz>0.0</ixz>
-            <iyy>0.050325</iyy>
-            <iyz>0.0</iyz>
-            <izz>0.020275</izz>
+          <ixx>0.033764</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.050325</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.020275</izz>
         </inertia>
       </inertial>
-
       <collision name='odom_fixed_joint_lump__base_link_collision'>
-        <pose>0 0 0.25 0 -0 0</pose>
+        <pose degrees="true">0 0 0.25 0 90 0</pose>
         <geometry>
           <box>
             <size>0.093 0.126 0.17</size>
           </box>
         </geometry>
       </collision>
-
       <visual name='odom_fixed_joint_lump__base_link_visual'>
         <!-- <pose>0 0 0 0 -0 0</pose> -->
-        <pose>0 0 0.25 0 -0 0</pose>
+        <pose degrees="true">0 0 0.25 0 90 0</pose>
         <geometry>
           <!-- <mesh>
             <scale>0.93 1.26 0.62</scale>
@@ -49,8 +44,7 @@
           <specular>1 1 1 1</specular>
         </material>
       </visual>
-
-    <!--  <visual name='odom_fixed_joint_lump__top_link_visual_1'>
+      <!--  <visual name='odom_fixed_joint_lump__top_link_visual_1'>
         <pose>0 0 0.114486 0 -0 0</pose>
         <geometry>
           <mesh>
@@ -65,7 +59,7 @@
           <emissive>0 0 0 1</emissive>
         </material>
       </visual>-->
-<!--
+      <!--
       <visual name='odom_fixed_joint_lump__battery_link_visual_2'>
         <pose>-0.09302 -0.000128 0.114486 0 -0 0</pose>
         <geometry>
@@ -79,8 +73,7 @@
           <specular>0.5 0.5 0.5</specular>
         </material>
       </visual>-->
-
-     <!-- <visual name='odom_fixed_joint_lump__housing_link_visual_3'>
+      <!-- <visual name='odom_fixed_joint_lump__housing_link_visual_3'>
         <pose>0.03473 0 0.114486 0 -0 0</pose>
         <geometry>
           <mesh>
@@ -95,8 +88,8 @@
           <emissive>0 1 0 1</emissive>
         </material>
       </visual>-->
-
-      <!--<visual name='odom_fixed_joint_lump__l_antenna_link_visual_4'>
+      <!--<visual
+      name='odom_fixed_joint_lump__l_antenna_link_visual_4'>
         <pose>-0.1565 0.0762 0.114486 0 -0 0</pose>
         <geometry>
           <mesh>
@@ -109,7 +102,6 @@
           <specular>0.5 0.5 0.5</specular>
         </material>
       </visual>
-
       <visual name='odom_fixed_joint_lump__r_antenna_link_visual_5'>
         <pose>-0.1565 -0.0762 0.114486 0 -0 0</pose>
         <geometry>
@@ -124,19 +116,17 @@
         </material>
       </visual>-->
 
-      <!--   SENSOR    -->
-
       <sensor name="imu_sensor" type="imu">
         <!-- <pose degrees="true">0 0 0 0 3.15149 0</pose> -->
-        <pose degrees="true">0 0 0 0 180 0</pose>
+        <pose degrees="true">0 0 0 180 0 0</pose>
         <always_on>1</always_on>
         <!-- <update_rate>10</update_rate> -->
         <update_rate>1000</update_rate>
         <visualize>true</visualize>
         <!-- <topic>imu</topic> -->
       </sensor>
-
-      <!--<sensor name="air_pressure_sensor" type="air_pressure">
+      <!--<sensor
+      name="air_pressure_sensor" type="air_pressure">
         <always_on>1</always_on>
         <update_rate>50</update_rate>
         <air_pressure>
@@ -149,11 +139,12 @@
         </air_pressure>
       </sensor> -->
     </link>
-    
-      <link name='lf_wheel_link'>
+
+    <link name='lf_wheel_link'>
       <pose>0.11 0.195 0.0392 0 -0 0</pose>
       <inertial>
-        <pose>0 0 0 1.57079632679 0 0</pose>
+        <!-- <pose>0 0 0 1.57079632679 0 0</pose> -->
+        <pose degrees="true">0 0 0 90 0 90</pose>
         <mass>0.670</mass>
         <inertia>
           <ixx>0.00287</ixx>
@@ -164,7 +155,6 @@
           <izz>0.001797</izz>
         </inertia>
       </inertial>
-      
       <collision name='lf_wheel_link_collision'>
         <pose>0 0 0 1.57079632679 0 0</pose>
         <geometry>
@@ -172,7 +162,7 @@
             <radius>0.0686</radius>
             <length>0.0762</length>
           </cylinder>
-          </geometry>
+        </geometry>
         <max_contacts>1</max_contacts>
         <surface>
           <friction>
@@ -202,7 +192,6 @@
           </contact>
         </surface>
       </collision>
-
       <visual name='lf_wheel_link_visual'>
         <!-- <pose>0 0 0 0 -0 0</pose> -->
         <pose>0 0 0 1.57079632679 0 0</pose>
@@ -222,14 +211,10 @@
             <uri>file://media/materials/scripts/gazebo.material</uri>
           </script>
           <diffuse>0.5 0.5 0.5 1</diffuse>
-        <specular>0.5 0.5 0.5 1</specular>
+          <specular>0.5 0.5 0.5 1</specular>
         </material>
       </visual>
-
     </link>
-
-
-
     <joint name='motor_0' type='revolute'>
       <child>lf_wheel_link</child>
       <parent>base_link</parent>
@@ -247,13 +232,11 @@
       </axis>
     </joint>
 
-
-
     <link name='lb_wheel_link'>
       <pose>-0.11 0.195 0.0392 0 -0 0</pose>
-
       <inertial>
-        <pose>0 0 0 1.57079632679 0 0</pose>
+        <!-- <pose>0 0 0 1.57079632679 0 0</pose> -->
+        <pose degrees="true">0 0 0 90 0 90</pose>
         <mass>0.670</mass>
         <inertia>
           <ixx>0.00287</ixx>
@@ -264,9 +247,9 @@
           <izz>0.001797</izz>
         </inertia>
       </inertial>
-
       <collision name='lb_wheel_link_collision'>
-        <!--<pose>-0.15 0.16317 0.0215 0 -0 0</pose>-->
+        <!--<pose>-0.15
+        0.16317 0.0215 0 -0 0</pose>-->
         <pose>0 0 0 1.57079632679 0 0</pose>
         <geometry>
           <cylinder>
@@ -303,34 +286,29 @@
           </contact>
         </surface>
       </collision>
-
       <visual name='lb_wheel_link_visual'>
-      <!-- <pose>0 0 0 0 -0 0</pose> -->
-      <pose>0 0 0 1.57079632679 0 0</pose>
-      <geometry>
-        <!-- <mesh>
+        <!-- <pose>0 0 0 0 -0 0</pose> -->
+        <pose>0 0 0 1.57079632679 0 0</pose>
+        <geometry>
+          <!-- <mesh>
           <scale>1 1 1</scale>
           <uri>model://rover_without_sensor/meshes/wheel_link.STL</uri>
         </mesh> -->
-        <cylinder>
-          <radius>0.0686</radius>
-          <length>0.0762</length>
-        </cylinder>
-    </geometry>
-      <material>
-        <script>
-          <name>Gazebo/Black</name>
-          <uri>file://media/materials/scripts/gazebo.material</uri>
-        </script>
-        <diffuse>0.5 0.5 0.5 1</diffuse>
-        <specular>0.5 0.5 0.5 1</specular>
-      </material>
+          <cylinder>
+            <radius>0.0686</radius>
+            <length>0.0762</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <name>Gazebo/Black</name>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+          </script>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
       </visual>
-
     </link>
-
-
-
     <joint name='motor_1' type='revolute'>
       <child>lb_wheel_link</child>
       <parent>base_link</parent>
@@ -348,12 +326,11 @@
       </axis>
     </joint>
 
-
-
     <link name='rf_wheel_link'>
       <pose>0.11 -0.195 0.0392 0 -0 0</pose>
       <inertial>
-        <pose>0 0 0 1.57079632679 0 0</pose>
+        <!-- <pose>0 0 0 1.57079632679 0 0</pose> -->
+        <pose degrees="true">0 0 0 90 0 90</pose>
         <mass>0.670</mass>
         <inertia>
           <ixx>0.00287</ixx>
@@ -364,9 +341,6 @@
           <izz>0.001797</izz>
         </inertia>
       </inertial>
-
-
-
       <collision name='rf_wheel_link_collision'>
         <pose>0 0 0 1.57079632679 0 0</pose>
         <geometry>
@@ -404,9 +378,6 @@
           </contact>
         </surface>
       </collision>
-
-
-
       <visual name='rf_wheel_link_visual'>
         <!-- <pose>0 0 0 0 -0 0</pose> -->
         <pose>0 0 0 1.57079632679 0 0</pose>
@@ -419,21 +390,17 @@
             <radius>0.0686</radius>
             <length>0.0762</length>
           </cylinder>
-          </geometry>
-      <material>
+        </geometry>
+        <material>
           <script>
             <name>Gazebo/Black</name>
             <uri>file://media/materials/scripts/gazebo.material</uri>
           </script>
           <diffuse>0.5 0.5 0.5 1</diffuse>
-        <specular>0.5 0.5 0.5 1</specular>
+          <specular>0.5 0.5 0.5 1</specular>
         </material>
       </visual>
-
     </link>
-
-
-
     <joint name='motor_2' type='revolute'>
       <child>rf_wheel_link</child>
       <parent>base_link</parent>
@@ -451,12 +418,11 @@
       </axis>
     </joint>
 
-
-
     <link name='rb_wheel_link'>
       <pose>-0.11 -0.195 0.0392 0 -0 0</pose>
       <inertial>
-        <pose>0 0 0 1.57079632679 0 0</pose>
+        <!-- <pose>0 0 0 1.57079632679 0 0</pose> -->
+        <pose degrees="true">0 0 0 90 0 90</pose>
         <mass>0.670</mass>
         <inertia>
           <ixx>0.00287</ixx>
@@ -467,9 +433,9 @@
           <izz>0.001797</izz>
         </inertia>
       </inertial>
-
       <collision name='rb_wheel_link_collision'>
-        <!--<pose>-0.15 -0.16317 0.0215 0 -0 0</pose>-->
+        <!--<pose>-0.15
+        -0.16317 0.0215 0 -0 0</pose>-->
         <pose>0 0 0 1.57079632679 0 0</pose>
         <geometry>
           <cylinder>
@@ -497,14 +463,13 @@
             <threshold>1e6</threshold>
           </bounce>
           <contact>
-          <ode>
-            <min_depth>0.001</min_depth>
-            <kp>1e8</kp>
-          </ode>
+            <ode>
+              <min_depth>0.001</min_depth>
+              <kp>1e8</kp>
+            </ode>
           </contact>
         </surface>
       </collision>
-
       <visual name='rb_wheel_link_visual'>
         <!-- <pose>0 0 0 0 -0 0</pose> -->
         <pose>0 0 0 1.57079632679 0 0</pose>
@@ -524,14 +489,10 @@
             <uri>file://media/materials/scripts/gazebo.material</uri>
           </script>
           <diffuse>0.5 0.5 0.5 1</diffuse>
-        <specular>0.5 0.5 0.5 1</specular>
+          <specular>0.5 0.5 0.5 1</specular>
         </material>
       </visual>
-
     </link>
-
-
-
     <joint name='motor_3' type='revolute'>
       <child>rb_wheel_link</child>
       <parent>base_link</parent>
@@ -550,27 +511,20 @@
         </dynamics>
       </axis>
     </joint>
-    
 
-   <!-- plugins -->
-    <!--   <plugin name="JointStatePublisher" filename="libJointStatePublisher.so">
-        <publish_selected_only>true</publish_selected_only>
-        <joint>motor_0</joint>
-        <joint>motor_1</joint>
-        <joint>motor_2</joint>
-        <joint>motor_3</joint>
-      </plugin>
-        
-    
-
-    <plugin name="odometry_publisher" filename="libOdometryPublisher.so">
+    <!-- plugins -->
+    <plugin filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+    <plugin
+      filename="gz-sim-odometry-publisher-system"
+      name="gz::sim::systems::OdometryPublisher">
       <odom_frame>odom</odom_frame>
       <robot_base_frame>base_link</robot_base_frame>
       <dimensions>3</dimensions>
     </plugin>
--->
 
-<!--
+    <!--
     <plugin filename="libApplyJointForce.so"
       name="apply_joint_force_motor_0">
       <joint_name>motor_0</joint_name>
@@ -590,83 +544,83 @@
     </plugin>-->
 
     <plugin name="ArduPilotPlugin"
-        filename="libArduPilotPlugin.so">
-        <fdm_addr>127.0.0.1</fdm_addr>
-        <fdm_port_in>9002</fdm_port_in>
-        <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
-        <lock_step>1</lock_step>
-        <gazeboXYZToNED degrees="true">0 0 0 0 3.14159 0</gazeboXYZToNED>
-        <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 0 0 0</modelXYZToAirplaneXForwardZDown>
-        <imuName>base_link::imu_sensor</imuName>
+      filename="ArduPilotPlugin">
+      <fdm_addr>127.0.0.1</fdm_addr>
+      <fdm_port_in>9002</fdm_port_in>
+      <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+      <lock_step>1</lock_step>
+      <have_32_channels>0</have_32_channels>
+      <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
+      <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
+      <imuName>base_link::imu_sensor</imuName>
 
-        <control channel="0">
-          <jointName>motor_0</jointName>
-          <useForce>1</useForce>
-          <multiplier>46.3</multiplier>
-          <offset>-0.5</offset>
-          <servo_min>1000</servo_min>
-          <servo_max>2000</servo_max>
-          <type>VELOCITY</type>
-          <p_gain>0.2</p_gain>
-          <i_gain>0.06</i_gain>
-          <d_gain>0.0001</d_gain>
-          <i_max>1</i_max>
-          <i_min>-1</i_min>
-          <cmd_max>-1.0</cmd_max>
-          <cmd_min>0.0</cmd_min>
-        </control>
+      <control channel="0">
+        <jointName>motor_0</jointName>
+        <useForce>1</useForce>
+        <multiplier>46.3</multiplier>
+        <offset>-0.5</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.2</p_gain>
+        <i_gain>0.06</i_gain>
+        <d_gain>0.0001</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>100.0</cmd_max>
+        <cmd_min>-100.0</cmd_min>
+      </control>
 
-        <control channel="0">
-          <jointName>motor_1</jointName>
-          <useForce>1</useForce>
-          <multiplier>46.3</multiplier>
-          <offset>-0.5</offset>
-          <servo_min>1000</servo_min>
-          <servo_max>2000</servo_max>
-          <type>VELOCITY</type>
-          <p_gain>0.2</p_gain>
-          <i_gain>0.06</i_gain>
-          <d_gain>0.0001</d_gain>
-          <i_max>1</i_max>
-          <i_min>-1</i_min>
-          <cmd_max>-1.0</cmd_max>
-          <cmd_min>0.0</cmd_min>
-        </control>
+      <control channel="0">
+        <jointName>motor_1</jointName>
+        <useForce>1</useForce>
+        <multiplier>46.3</multiplier>
+        <offset>-0.5</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.2</p_gain>
+        <i_gain>0.06</i_gain>
+        <d_gain>0.0001</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>100.0</cmd_max>
+        <cmd_min>-100.0</cmd_min>
+      </control>
 
-        <control channel="2">
-          <jointName>motor_2</jointName>
-          <useForce>1</useForce>
-          <multiplier>46.3</multiplier>
-          <offset>-0.5</offset>
-          <servo_min>1000</servo_min>
-          <servo_max>2000</servo_max>
-          <type>VELOCITY</type>
-          <p_gain>0.2</p_gain>
-          <i_gain>0.06</i_gain>
-          <d_gain>0.0001</d_gain>
-          <i_max>1</i_max>
-          <i_min>-1</i_min>
-          <cmd_max>-1.0</cmd_max>
-          <cmd_min>0.0</cmd_min>
-        </control>
+      <control channel="2">
+        <jointName>motor_2</jointName>
+        <useForce>1</useForce>
+        <multiplier>46.3</multiplier>
+        <offset>-0.5</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.2</p_gain>
+        <i_gain>0.06</i_gain>
+        <d_gain>0.0001</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>100.0</cmd_max>
+        <cmd_min>-100.0</cmd_min>
+      </control>
 
-        <control channel="2">
-          <jointName>motor_3</jointName>
-          <useForce>1</useForce>
-          <multiplier>46.3</multiplier>
-          <offset>-0.5</offset>
-          <servo_min>1000</servo_min>
-          <servo_max>2000</servo_max>
-          <type>VELOCITY</type>
-          <p_gain>0.2</p_gain>
-          <i_gain>0.06</i_gain>
-          <d_gain>0.0001</d_gain>
-          <i_max>1</i_max>
-          <i_min>-1</i_min>
-          <cmd_max>-1.0</cmd_max>
-          <cmd_min>0.0</cmd_min>
-        </control>
-
+      <control channel="2">
+        <jointName>motor_3</jointName>
+        <useForce>1</useForce>
+        <multiplier>46.3</multiplier>
+        <offset>-0.5</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.2</p_gain>
+        <i_gain>0.06</i_gain>
+        <d_gain>0.0001</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>100.0</cmd_max>
+        <cmd_min>-100.0</cmd_min>
+      </control>
     </plugin>
 
   </model>
