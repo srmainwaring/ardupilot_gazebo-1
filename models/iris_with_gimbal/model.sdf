@@ -316,6 +316,18 @@
         <p_gain>2</p_gain>
       </control>
 
+      <!-- camera focus (zoom) - joint is required but not actuated -->
+      <control channel="11">
+        <jointName>gimbal::yaw_joint</jointName>
+        <multiplier>124.0</multiplier>
+        <offset>0.008064516129032258</offset>
+        <servo_min>1100</servo_min>
+        <servo_max>1900</servo_max>
+        <type>COMMAND</type>
+        <cmd_topic>/model/gimbal/sensor/camera/zoom/cmd_zoom</cmd_topic>
+        <p_gain>2</p_gain>
+      </control>
+      
     </plugin>
 
     <plugin
@@ -338,6 +350,18 @@
       <joint_name>gimbal::yaw_joint</joint_name>
       <topic>/gimbal/cmd_yaw</topic>
       <p_gain>2</p_gain>
+    </plugin>
+
+    <plugin name="gz::sim::systems::PosePublisher"
+      filename="gz-sim-pose-publisher-system">
+      <publish_link_pose>1</publish_link_pose>
+      <publish_visual_pose>0</publish_visual_pose>
+      <publish_collision_pose>0</publish_collision_pose>
+      <publish_sensor_pose>1</publish_sensor_pose>
+      <publish_model_pose>1</publish_model_pose>
+      <publish_nested_model_pose>1</publish_nested_model_pose>
+      <use_pose_vector_msg>1</use_pose_vector_msg>
+      <update_frequency>50</update_frequency>
     </plugin>
 
   </model>
