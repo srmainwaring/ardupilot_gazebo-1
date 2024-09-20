@@ -340,5 +340,26 @@
       <p_gain>2</p_gain>
     </plugin>
 
+    <plugin
+      filename="gz-sim-odometry-publisher-system"
+      name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <dimensions>3</dimensions>
+      <tf_topic>/model/iris_with_gimbal/tf</tf_topic>
+    </plugin>
+    <plugin
+      name="gz::sim::systems::PosePublisher"
+      filename="gz-sim-pose-publisher-system">
+      <publish_link_pose>1</publish_link_pose>
+      <publish_visual_pose>0</publish_visual_pose>
+      <publish_collision_pose>0</publish_collision_pose>
+      <publish_sensor_pose>1</publish_sensor_pose>
+      <publish_model_pose>1</publish_model_pose>
+      <publish_nested_model_pose>1</publish_nested_model_pose>
+      <use_pose_vector_msg>1</use_pose_vector_msg>
+      <update_frequency>50</update_frequency>
+    </plugin>
+
   </model>
 </sdf>
