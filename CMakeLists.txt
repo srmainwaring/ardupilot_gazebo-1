@@ -95,26 +95,6 @@ target_include_directories(CameraZoomPlugin PRIVATE
 target_link_libraries(CameraZoomPlugin PRIVATE
   gz-common${GZ_COMMON_VER}::gz-common${GZ_COMMON_VER}
   gz-rendering${GZ_RENDERING_VER}::gz-rendering${GZ_RENDERING_VER}
-add_library(GravityPlugin
-  SHARED
-  src/GravityPlugin.cc
-)
-
-target_include_directories(GravityPlugin PRIVATE
-  include
-)
-target_link_libraries(GravityPlugin PRIVATE
-  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
-)
-
-add_library(InitialVelocityPlugin
-  SHARED
-  src/InitialVelocityPlugin.cc
-)
-target_include_directories(InitialVelocityPlugin PRIVATE
-  include
-)
-target_link_libraries(InitialVelocityPlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
@@ -131,6 +111,28 @@ target_link_libraries(GstCameraPlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
   ${OpenCV_LIBS}
   ${GST_LINK_LIBRARIES}
+)
+
+add_library(GravityPlugin
+  SHARED
+  src/GravityPlugin.cc
+)
+target_include_directories(GravityPlugin PRIVATE
+  include
+)
+target_link_libraries(GravityPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
+add_library(InitialVelocityPlugin
+  SHARED
+  src/InitialVelocityPlugin.cc
+)
+target_include_directories(InitialVelocityPlugin PRIVATE
+  include
+)
+target_link_libraries(InitialVelocityPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
 )
 
 # --------------------------------------------------------------------------- #
