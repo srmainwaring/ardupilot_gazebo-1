@@ -165,11 +165,14 @@
           <material>
             <ambient>1 1 1</ambient>
             <diffuse>1 1 1</diffuse>
-            <specular>1 1 1</specular>
+            <specular>0.01 0.01 0.01</specular>
             <pbr>
               <metal>
-                  <albedo_map>ear0xuu2.jpg</albedo_map>
+                  <!-- https://www.solarsystemscope.com/textures/ -->
+                  <albedo_map>8k_earth_daymap.jpg</albedo_map>
+                  <normal_map>8k_earth_normal_map.tif</normal_map>
                   <metalness>0.1</metalness>
+                  <roughness>0.8</roughness>
               </metal>
             </pbr>
           </material>
@@ -184,6 +187,7 @@
     </model>
 
     <!-- red satellite in equatorial orbit -->
+    <!-- https://www.solarsystemscope.com/textures/ -->
     <model name="satellite1">
       <pose>-15 0 0 0 0 0</pose>
       <link name="base_link">
@@ -215,9 +219,16 @@
             </sphere>
           </geometry>
           <material>
-            <ambient>1.0 0.0 0.0</ambient>
-            <diffuse>1.0 0.0 0.0</diffuse>
-            <specular>0.01 0.01 0.01 1.0</specular>
+            <ambient>1 0 0</ambient>
+            <diffuse>1 0 0</diffuse>
+            <specular>0.01 0.01 0.01</specular>
+            <pbr>
+              <metal>
+                  <albedo_map>2k_moon.jpg</albedo_map>
+                  <metalness>0.1</metalness>
+                  <roughness>0.8</roughness>
+              </metal>
+            </pbr>
           </material>
         </visual>
       </link>
@@ -269,9 +280,16 @@
             </sphere>
           </geometry>
           <material>
-            <ambient>0.0 0.0 1.0</ambient>
-            <diffuse>0.0 0.0 1.0</diffuse>
-            <specular>0.01 0.01 0.01 1.0</specular>
+            <ambient>0 0 1</ambient>
+            <diffuse>0 0 1</diffuse>
+            <specular>0.01 0.01 0.01</specular>
+            <pbr>
+              <metal>
+                  <albedo_map>2k_moon.jpg</albedo_map>
+                  <metalness>0.1</metalness>
+                  <roughness>0.8</roughness>
+              </metal>
+            </pbr>
           </material>
         </visual>
       </link>
@@ -323,9 +341,16 @@
             </sphere>
           </geometry>
           <material>
-            <ambient>0.0 1.0 0.0</ambient>
-            <diffuse>0.0 1.0 0.0</diffuse>
-            <specular>0.01 0.01 0.01 1.0</specular>
+            <ambient>0 1 0</ambient>
+            <diffuse>0 1 0</diffuse>
+            <specular>0.01 0.01 0.01</specular>
+            <pbr>
+              <metal>
+                  <albedo_map>2k_moon.jpg</albedo_map>
+                  <metalness>0.1</metalness>
+                  <roughness>0.8</roughness>
+              </metal>
+            </pbr>
           </material>
         </visual>
       </link>
@@ -349,7 +374,6 @@
       <uri>model://iris_with_gimbal</uri>
       <pose degrees="true">0 0 10.3 0 0 90</pose>
     </include> -->
-
 
     <!--
       Earth uses ECEF frame
