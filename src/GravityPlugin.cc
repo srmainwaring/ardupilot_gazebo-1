@@ -63,6 +63,9 @@ class GravityPlugin::Impl
   /// \brief Flag set to true if the plugin is initialised.
   public: bool initialised{false};
 
+  /// \brief Power law exponent. Default is inverse square.
+  public: double gravity_expo{-2.0};
+
   /// \brief Universal gravitational constant (N m^2 / kg^2).
   public: static constexpr double G{6.67430E-11};
 };
@@ -98,15 +101,20 @@ void GravityPlugin::Configure(
   }
 
   // parameters
-  if (_sdf->HasElement("source"))
+  if (_sdf->HasElement("gravity_source"))
   {
-    this->impl->sourceName = _sdf->Get<std::string>("source");
+    this->impl->sourceName = _sdf->Get<std::string>("gravity_source");
   }
   else
   {
     gzerr << "GravityPlugin: requires parameter 'source'. "
              "Failed to initialize.\n";
     return;
+  }
+
+  if (_sdf->HasElement("gravity_expo"))
+  {
+    this->impl->gravity_expo = _sdf->Get<double>("gravity_expo");
   }
 
   if (_sdf->HasElement("debug"))
@@ -207,10 +215,10 @@ void GravityPlugin::PreUpdate(
 
     // inverse radius
     double one_over_r = 1.0 / r;
-    double one_over_r2 = 1.0 / (r * r);
+    double r_expo = pow(r, this->impl->gravity_expo);
 
     // magnitude of force
-    auto f = 1.0 * this->impl->G * mass_C * mass_B * one_over_r2;
+    auto f = 1.0 * this->impl->G * mass_C * mass_B * r_expo;
 
     // direction of force
     auto direction = -1.0 * one_over_r * p_CB_W;
