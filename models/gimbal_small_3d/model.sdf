@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
   <model name="gimbal_small_3d">
-    <pose>0 0 0.18 0 0 0</pose>
-    <link name="base_link">
+    <link name="gimbal_link">
       <inertial>
         <mass>0.2</mass>
         <inertia>
@@ -14,7 +13,7 @@
           <izz>0.0001</izz>
         </inertia>
       </inertial>
-      <visual name="base_visual">
+      <visual name="visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/base_plate.dae</uri>
@@ -26,7 +25,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name="base_collision">
+      <collision name="collision">
         <pose>0.01 0.075 -0.025 0 0 0</pose>
         <geometry>
           <box>
@@ -48,7 +47,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name="yaw_visual">
+      <visual name="visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/yaw_arm.dae</uri>
@@ -60,7 +59,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name="yaw_collision">
+      <collision name="collision">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/yaw_arm.dae</uri>
@@ -69,7 +68,7 @@
       </collision>
     </link>
     <joint name="yaw_joint" type="revolute">
-      <parent>base_link</parent>
+      <parent>gimbal_link</parent>
       <child>yaw_link</child>
       <axis>
         <xyz>0 1 0</xyz>
@@ -96,7 +95,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name="roll_visual">
+      <visual name="visual">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/roll_arm.dae</uri>
@@ -108,7 +107,7 @@
           <specular>0.01 0.01 0.01 1.0</specular>
         </material>
       </visual>
-      <collision name="roll_collision">
+      <collision name="collision">
         <geometry>
           <mesh>
             <uri>model://gimbal_small_3d/meshes/roll_arm.dae</uri>
@@ -144,7 +143,7 @@
           <izz>0.00001</izz>
         </inertia>
       </inertial>
-      <visual name="pitch_visual">
+      <visual name="visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -157,7 +156,7 @@
           <specular>0.1 0.1 0.1 1.0</specular>
         </material>
       </visual>
-      <collision name="pitch_collision">
+      <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
