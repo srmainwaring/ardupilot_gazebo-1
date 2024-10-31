@@ -1,19 +1,21 @@
 <?xml version='1.0'?>
 <sdf version="1.9">
   <model name="iris_with_gimbal">
-    <include>
+    <include merge="true">
       <uri>model://iris_with_standoffs</uri>
+      <name>iris</name>
+      <pose degrees="true">0 0 0 0 0 0</pose>    
     </include>
 
-    <include>
+    <include merge="true">
       <uri>model://gimbal_small_3d</uri>
       <name>gimbal</name>
       <pose degrees="true">0 -0.01 -0.124923 90 0 90</pose>    
     </include>
 
     <joint name="gimbal_joint" type="revolute">
-      <parent>iris_with_standoffs::base_link</parent>
-      <child>gimbal::base_link</child>
+      <parent>base_link</parent>
+      <child>gimbal_link</child>
       <axis>
         <limit>
           <lower>0</lower>
@@ -27,6 +29,7 @@
     <plugin filename="gz-sim-joint-state-publisher-system"
       name="gz::sim::systems::JointStatePublisher">
     </plugin>
+
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
       <a0>0.3</a0>
@@ -42,7 +45,7 @@
       <cp>0.084 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_0</link_name>
+      <link_name>rotor_0</link_name>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -59,7 +62,7 @@
       <cp>-0.084 0 0</cp>
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_0</link_name>
+      <link_name>rotor_0</link_name>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -77,7 +80,7 @@
       <cp>0.084 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_1</link_name>
+      <link_name>rotor_1</link_name>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -94,7 +97,7 @@
       <cp>-0.084 0 0</cp>
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_1</link_name>
+      <link_name>rotor_1</link_name>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -112,7 +115,7 @@
       <cp>0.084 0 0</cp>
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_2</link_name>
+      <link_name>rotor_2</link_name>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -129,7 +132,7 @@
       <cp>-0.084 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_2</link_name>
+      <link_name>rotor_2</link_name>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system"
@@ -147,7 +150,7 @@
       <cp>0.084 0 0</cp>
       <forward>0 -1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_3</link_name>
+      <link_name>rotor_3</link_name>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
@@ -164,24 +167,7 @@
       <cp>-0.084 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
-      <link_name>iris_with_standoffs::rotor_3</link_name>
-    </plugin>
-
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_0_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_1_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_2_joint</joint_name>
-    </plugin>
-    <plugin filename="gz-sim-apply-joint-force-system"
-      name="gz::sim::systems::ApplyJointForce">
-      <joint_name>iris_with_standoffs::rotor_3_joint</joint_name>
+      <link_name>rotor_3</link_name>
     </plugin>
 
     <plugin name="ArduPilotPlugin"
@@ -199,7 +185,7 @@
       <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
 
       <!-- Sensors -->
-      <imuName>iris_with_standoffs::imu_link::imu_sensor</imuName>
+      <imuName>imu_link::imu_sensor</imuName>
 
       <!--
           incoming control command [0, 1]
@@ -209,7 +195,7 @@
           multiplier = 838 max rpm / 1 = 838
         -->
       <control channel="0">
-        <jointName>iris_with_standoffs::rotor_0_joint</jointName>
+        <jointName>rotor_0_joint</jointName>
         <useForce>1</useForce>
         <multiplier>838</multiplier>
         <offset>0</offset>
@@ -227,7 +213,7 @@
       </control>
 
       <control channel="1">
-        <jointName>iris_with_standoffs::rotor_1_joint</jointName>
+        <jointName>rotor_1_joint</jointName>
         <useForce>1</useForce>
         <multiplier>838</multiplier>
         <offset>0</offset>
@@ -245,7 +231,7 @@
       </control>
 
       <control channel="2">
-        <jointName>iris_with_standoffs::rotor_2_joint</jointName>
+        <jointName>rotor_2_joint</jointName>
         <useForce>1</useForce>
         <multiplier>-838</multiplier>
         <offset>0</offset>
@@ -263,7 +249,7 @@
       </control>
 
       <control channel="3">
-        <jointName>iris_with_standoffs::rotor_3_joint</jointName>
+        <jointName>rotor_3_joint</jointName>
         <useForce>1</useForce>
         <multiplier>-838</multiplier>
         <offset>0</offset>
@@ -282,7 +268,7 @@
 
       <!-- roll range is -30 to +30 deg -->
       <control channel="8">
-        <jointName>gimbal::roll_joint</jointName>
+        <jointName>roll_joint</jointName>
         <multiplier>1.047197551196</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
@@ -294,7 +280,7 @@
 
       <!-- pitch range is -135 to +45 deg -->
       <control channel="9">
-        <jointName>gimbal::pitch_joint</jointName>
+        <jointName>pitch_joint</jointName>
         <multiplier>-3.14159265</multiplier>
         <offset>-0.75</offset>
         <servo_min>1100</servo_min>
@@ -306,7 +292,7 @@
 
       <!-- yaw range is -160 to +160 deg -->
       <control channel="10">
-        <jointName>gimbal::yaw_joint</jointName>
+        <jointName>yaw_joint</jointName>
         <multiplier>-5.5850536</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
@@ -321,21 +307,21 @@
     <plugin
       filename="gz-sim-joint-position-controller-system"
       name="gz::sim::systems::JointPositionController">
-      <joint_name>gimbal::roll_joint</joint_name>
+      <joint_name>roll_joint</joint_name>
       <topic>/gimbal/cmd_roll</topic>
       <p_gain>2</p_gain>
     </plugin>
     <plugin
       filename="gz-sim-joint-position-controller-system"
       name="gz::sim::systems::JointPositionController">
-      <joint_name>gimbal::pitch_joint</joint_name>
+      <joint_name>pitch_joint</joint_name>
       <topic>/gimbal/cmd_pitch</topic>
       <p_gain>2</p_gain>
     </plugin>
     <plugin
       filename="gz-sim-joint-position-controller-system"
       name="gz::sim::systems::JointPositionController">
-      <joint_name>gimbal::yaw_joint</joint_name>
+      <joint_name>yaw_joint</joint_name>
       <topic>/gimbal/cmd_yaw</topic>
       <p_gain>2</p_gain>
     </plugin>
