@@ -19,73 +19,13 @@ GZ_VERSION = GZ_VERSION_HARMONIC
 if GZ_VERSION == GZ_VERSION_GARDEN:
     from gz.msgs9.model_pb2 import Model
 elif GZ_VERSION == GZ_VERSION_HARMONIC:
-    # from gz.msgs10.air_speed_pb2 import AirSpeed
-    # from gz.msgs10.altimeter_pb2 import Altimeter
-    # from gz.msgs10.axis_pb2 import Axis
-    # from gz.msgs10.axis_aligned_box_pb2 import AxisAlignedBox
-    # from gz.msgs10.fluid_pressure_pb2 import FluidPressure
-    # from gz.msgs10.imu_pb2 import IMU
-    # from gz.msgs10.joint_pb2 import Joint
-    # from gz.msgs10.link_pb2 import Link
-    # from gz.msgs10.magnetometer_pb2 import Magnetometer
     from gz.msgs10.model_pb2 import Model
-    # from gz.msgs10.navsat_pb2 import NavSat
-    # from gz.msgs10.pose_pb2 import Pose
-    # from gz.msgs10.sensor_pb2 import Sensor
-    # from gz.msgs10.vector3d_pb2 import Vector3d
-    # from gz.msgs10.visual_pb2 import Visual
-    # from gz.msgs10.header_pb2 import Header
 elif GZ_VERSION == GZ_VERSION_IONIC:
     from gz.msgs11.model_pb2 import Model
 
 
-# def sensor_topics():
-#     world = "iris_runway"
-#     model = "iris_with_gimbal"
-#     sub_model = "iris_with_standoffs"
-#     link = "base_link"
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/{link}"
-#         f"/sensor/air_pressure_sensor/air_pressure"
-#     )
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/base_link"
-#         f"/sensor/air_speed_sensor/air_speed"
-#     )
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/{link}"
-#         f"/sensor/altimeter_sensor/altimeter"
-#     )
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/{link}"
-#         f"/sensor/magnetometer_sensor/magnetometer"
-#     )
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/{link}"
-#         f"/sensor/navsat_sensor/navsat"
-#     )
-
-#     link = "imu_link"
-
-#     topic = (
-#         f"/world/{world}/model/{model}"
-#         f"/model/{sub_model}/link/{link}"
-#         f"/sensor/imu_sensor/imu"
-#     )
-
-
-# Importing gz.transport13 into the module global scope causes an odd conflict
-# with dronecan. This is a workaround.
+# Importing gz.transport into the module global scope causes an odd
+# multiprocessing conflict with dronecan. This is a workaround.
 def gz_node():
     if GZ_VERSION == GZ_VERSION_GARDEN:
         from gz.transport12 import Node
@@ -118,8 +58,8 @@ class JointStates:
             self._model_msg = msg
             do_print_msg = self._model_do_print_msg
 
-        # if do_print_msg:
-        #     print(msg)
+        if do_print_msg:
+            print(msg)
 
     def joint_by_name(self, joint_name):
         with self._lock:
@@ -184,13 +124,6 @@ class DroneCANNode:
             debug = self._debug
             rpm = self._rpm
 
-        # fake esc data
-        # s = math.sin(time.time() * math.pi * 2)
-        # rpm[0] = int(10000 + 1000 * s)
-        # rpm[1] = int(10500 + 1000 * s)
-        # rpm[2] = int(11000 + 1000 * s)
-        # rpm[3] = int(11500 + 1000 * s)
-
         msg = dronecan.uavcan.equipment.esc.Status()
 
         # esc 0, 1, 2, 3
@@ -217,7 +150,6 @@ class DroneCANNode:
         self._node.broadcast(msg)
 
         if debug:
-            # print(f"idx {msg.esc_index}, rpm: {msg.rpm}")
             print(dronecan.to_yaml(msg))
 
     def set_rpm(self, esc_index, rpm):
