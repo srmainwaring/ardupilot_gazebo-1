@@ -9,6 +9,7 @@ import threading
 import time
 
 from argparse import ArgumentParser
+from contextlib import closing
 
 GZ_VERSION_GARDEN = "garden"
 GZ_VERSION_HARMONIC = "harmonic"
@@ -94,8 +95,9 @@ class DroneCANNode:
 
         self._rpm = [0, 0, 0, 0]
 
-        self._node = None
         self._lock = threading.Lock()
+        self._node = None
+        self._esc_pub = None
         self._task_thread = threading.Thread(target=self._run)
         self._task_thread.start()
 
@@ -105,19 +107,35 @@ class DroneCANNode:
             node_id = self._node_id
             rate = self._rate
 
+        node_info = dronecan.uavcan.protocol.GetNodeInfo.Response()
+        node_info.name = "org.ardupilot.gazebo"
+        node_info.software_version.major = 0
+        node_info.hardware_version.unique_id = b"12345"
+        # etc.
+
         # Initialise a DroneCAN node instance.
-        self._node = dronecan.make_node(uri, node_id=node_id, bitrate=1000000)
+        with closing(
+            dronecan.make_node(
+                uri, node_id=node_id, bitrate=1000000, node_info=node_info
+            )
+        ) as self._node:
+            # Setup to publish sensor measurement
+            self._esc_pub = self._node.periodic(1.0 / rate, self._pub_esc_status)
 
-        # Setup to publish sensor measurement
-        self._node.periodic(1.0 / rate, self._pub_esc_status)
+            # Set mode and health status
+            self._node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
+            self._node.health = dronecan.uavcan.protocol.NodeStatus().HEALTH_OK
+            # self._node.vendor_specific_status_code = 12345
+            # etc.
 
-        # Running the node
-        while True:
-            try:
-                self._node.spin()
-            except dronecan.transport.TransferError as ex:
-                print(ex)
-                pass
+            # Run the node
+            while True:
+                try:
+                    self._node.spin()
+                except dronecan.UAVCANException as ex:
+                    print(f"Node error: {ex}")
+                except dronecan.transport.TransferError as ex:
+                    print(f"Node error: {ex}")
 
     def _pub_esc_status(self):
         with self._lock:
