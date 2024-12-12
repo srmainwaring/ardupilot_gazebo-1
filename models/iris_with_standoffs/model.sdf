@@ -1,8 +1,8 @@
-<?xml version='1.0'?>
-<sdf version='1.9'>
-  <model name='iris_with_standoffs'>
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="iris_with_standoffs">
     <pose>0 0 0 0 0 0</pose>
-    <link name='base_link'>
+    <link name="base_link">
       <velocity_decay>
         <linear>0.0</linear>
         <angular>0.0</angular>
@@ -19,7 +19,7 @@
           <izz>0.017</izz>
         </inertia>
       </inertial>
-      <collision name='base_collision'>
+      <collision name="base_collision">
         <pose>0 0 -0.08 0 0 0</pose>
         <geometry>
           <box>
@@ -41,7 +41,7 @@
           </friction>
         </surface>
       </collision>
-      <visual name='base_visual'>
+      <visual name="base_visual">
         <geometry>
           <mesh>
             <uri>model://iris_with_standoffs/meshes/iris.dae</uri>
@@ -60,7 +60,7 @@
         </material>
       </visual>
 
-      <visual name='front_left_leg_visual'>
+      <visual name="front_left_leg_visual">
         <pose>0.123 0.22 -0.11 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -80,7 +80,7 @@
           </pbr>
         </material>
       </visual>
-      <visual name='front_right_leg_visual'>
+      <visual name="front_right_leg_visual">
         <pose>0.123 -0.22 -0.11 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -100,7 +100,7 @@
           </pbr>
         </material>
       </visual>
-      <visual name='rear_left_leg_visual'>
+      <visual name="rear_left_leg_visual">
         <pose>-0.140 0.21 -0.11 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -120,7 +120,7 @@
           </pbr>
         </material>
       </visual>
-      <visual name='rear_right_leg_visual'>
+      <visual name="rear_right_leg_visual">
         <pose>-0.140 -0.21 -0.11 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -141,7 +141,7 @@
         </material>
       </visual>
     </link>
-    <link name='imu_link'>
+    <link name="imu_link">
       <inertial>
         <pose>0 0 0 0 0 0</pose>
         <mass>0.15</mass>
@@ -160,7 +160,7 @@
         <update_rate>1000.0</update_rate>
       </sensor>
     </link>
-    <joint name='imu_joint' type='revolute'>
+    <joint name="imu_joint" type="revolute">
       <child>imu_link</child>
       <parent>base_link</parent>
       <axis>
@@ -176,7 +176,7 @@
         </dynamics>
       </axis>
     </joint>
-    <link name='rotor_0'>
+    <link name="rotor_1_link">
       <pose>0.13 -0.22 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -190,7 +190,7 @@
           <izz>0.000167604</izz>
         </inertia>
       </inertial>
-      <collision name='rotor_0_collision'>
+      <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -207,7 +207,7 @@
           </friction>
         </surface>
       </collision>
-      <visual name='rotor_0_visual'>
+      <visual name="visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -231,8 +231,8 @@
       <velocity_decay/>
       <self_collide>0</self_collide>
     </link>
-    <joint name='rotor_0_joint' type='revolute'>
-      <child>rotor_0</child>
+    <joint name="rotor_1_joint" type="revolute">
+      <child>rotor_1_link</child>
       <parent>base_link</parent>
       <axis>
         <xyz>0 0 1</xyz>
@@ -250,7 +250,7 @@
         </ode>
       </physics>
     </joint>
-    <link name='rotor_1'>
+    <link name="rotor_2_link">
       <pose>-0.13 0.2 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -264,7 +264,7 @@
           <izz>0.000167604</izz>
         </inertia>
       </inertial>
-      <collision name='rotor_1_collision'>
+      <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -281,7 +281,7 @@
           </friction>
         </surface>
       </collision>
-      <visual name='rotor_1_visual'>
+      <visual name="visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -305,8 +305,8 @@
       <velocity_decay/>
       <self_collide>0</self_collide>
     </link>
-    <joint name='rotor_1_joint' type='revolute'>
-      <child>rotor_1</child>
+    <joint name="rotor_2_joint" type="revolute">
+      <child>rotor_2_link</child>
       <parent>base_link</parent>
       <axis>
         <xyz>0 0 1</xyz>
@@ -324,7 +324,7 @@
         </ode>
       </physics>
     </joint>
-    <link name='rotor_2'>
+    <link name="rotor_3_link">
       <pose>0.13 0.22 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -338,7 +338,7 @@
           <izz>0.000167604</izz>
         </inertia>
       </inertial>
-      <collision name='rotor_2_collision'>
+      <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -355,7 +355,7 @@
           </friction>
         </surface>
       </collision>
-      <visual name='rotor_2_visual'>
+      <visual name="visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -379,8 +379,8 @@
       <velocity_decay/>
       <self_collide>0</self_collide>
     </link>
-    <joint name='rotor_2_joint' type='revolute'>
-      <child>rotor_2</child>
+    <joint name="rotor_3_joint" type="revolute">
+      <child>rotor_3_link</child>
       <parent>base_link</parent>
       <axis>
         <xyz>0 0 1</xyz>
@@ -398,7 +398,7 @@
         </ode>
       </physics>
     </joint>
-    <link name='rotor_3'>
+    <link name="rotor_4_link">
       <pose>-0.13 -0.2 0.023 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -412,7 +412,7 @@
           <izz>0.000167604</izz>
         </inertia>
       </inertial>
-      <collision name='rotor_3_collision'>
+      <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -429,7 +429,7 @@
           </friction>
         </surface>
       </collision>
-      <visual name='rotor_3_visual'>
+      <visual name="visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
@@ -453,8 +453,8 @@
       <velocity_decay/>
       <self_collide>0</self_collide>
     </link>
-    <joint name='rotor_3_joint' type='revolute'>
-      <child>rotor_3</child>
+    <joint name="rotor_4_joint" type="revolute">
+      <child>rotor_4_link</child>
       <parent>base_link</parent>
       <axis>
         <xyz>0 0 1</xyz>
