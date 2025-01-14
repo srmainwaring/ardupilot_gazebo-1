@@ -50,8 +50,7 @@
 #include "gz/sim/Events.hh"
 #include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
-/// \todo(srmainwaring) use when gz-sim7 v7.5 is released.
-// #include <gz/sim/Sensor.hh>
+#include <gz/sim/Sensor.hh>
 #include <gz/sim/World.hh>
 #include <gz/sim/Util.hh>
 
@@ -74,36 +73,6 @@ class CameraZoomPlugin::Impl
   /// \brief Initialise the rendering camera.
   public: void InitialiseCamera();
 
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  /// \brief Check sensor entity is valid.
-  public: bool SensorValid(const EntityComponentManager &_ecm) const
-  {
-    return nullptr !=
-        _ecm.Component<components::Sensor>(this->cameraSensorEntity);
-  }
-
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  /// \brief Get sensor name.
-  public: std::optional<std::string> SensorName(
-    const EntityComponentManager &_ecm) const
-  {
-    return _ecm.ComponentData<components::Name>(this->cameraSensorEntity);
-  }
-
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  /// \brief Get sensor parent.
-  public: std::optional<Entity> SensorParent(
-    const EntityComponentManager &_ecm) const
-  {
-    auto parent =
-        _ecm.Component<components::ParentEntity>(this->cameraSensorEntity);
-
-    if (!parent)
-      return std::nullopt;
-
-    return std::optional<sim::Entity>(parent->Data());
-  }
-
   /// \brief World occupied by the parent model.
   public: World world{kNullEntity};
 
@@ -111,9 +80,7 @@ class CameraZoomPlugin::Impl
   public: Model parentModel{kNullEntity};
 
   /// \brief Camera sensor.
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // public: Sensor cameraSensor{kNullEntity};
-  public: Entity cameraSensorEntity{kNullEntity};
+  public: Sensor cameraSensor{kNullEntity};
 
   /// \brief Name of the camera.
   public: std::string cameraName;
@@ -290,11 +257,8 @@ void CameraZoomPlugin::Configure(
     EventManager &_eventMgr)
 {
   // Capture camera sensor.
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // this->impl->cameraSensor = Sensor(_entity);
-  // if (!this->impl->cameraSensor.Valid(_ecm))
-  this->impl->cameraSensorEntity = _entity;
-  if (!this->impl->SensorValid(_ecm))
+  this->impl->cameraSensor = Sensor(_entity);
+  if (!this->impl->cameraSensor.Valid(_ecm))
   {
     gzerr << "CameraZoomPlugin must be attached to a camera sensor. "
              "Failed to initialize.\n";
@@ -302,9 +266,7 @@ void CameraZoomPlugin::Configure(
   }
 
   // Display plugin load status.
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // if (auto maybeName = this->impl->cameraSensor.Name(_ecm))
-  if (auto maybeName = this->impl->SensorName(_ecm))
+  if (auto maybeName = this->impl->cameraSensor.Name(_ecm))
   {
     gzdbg << "CameraZoomPlugin attached to sensor ["
           << maybeName.value() << "].\n";
@@ -316,9 +278,7 @@ void CameraZoomPlugin::Configure(
   }
 
   // Retrieve parent model.
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // if (auto maybeParentLink = this->impl->cameraSensor.Parent(_ecm))
-  if (auto maybeParentLink = this->impl->SensorParent(_ecm))
+  if (auto maybeParentLink = this->impl->cameraSensor.Parent(_ecm))
   {
     Link link(maybeParentLink.value());
     if (link.Valid(_ecm))
@@ -364,9 +324,7 @@ void CameraZoomPlugin::Configure(
       topics.push_back(_sdf->Get<std::string>("topic"));
     }
     auto parentModelName = this->impl->parentModel.Name(_ecm);
-    /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-    // auto sensorName = this->impl->cameraSensor.Name(_ecm).value();
-    auto sensorName = this->impl->SensorName(_ecm).value();
+    auto sensorName = this->impl->cameraSensor.Name(_ecm).value();
     topics.push_back("/model/" + parentModelName +
         "/sensor/" + sensorName + "/zoom/cmd_zoom");
     this->impl->zoomTopic = validTopic(topics);
@@ -406,9 +364,7 @@ void CameraZoomPlugin::PreUpdate(
     return;
   }
 
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // Entity cameraEntity = this->impl->cameraSensor.Entity();
-  Entity cameraEntity = this->impl->cameraSensorEntity;
+  Entity cameraEntity = this->impl->cameraSensor.Entity();
   auto comp = _ecm.Component<components::Camera>(cameraEntity);
   if (!comp)
     return;
@@ -493,9 +449,7 @@ void CameraZoomPlugin::PostUpdate(
   if (!this->impl->cameraName.empty())
     return;
 
-  /// \todo(srmainwaring) replace with `gz::sim::Sensor` when available.
-  // Entity cameraEntity = this->impl->cameraSensor.Entity();
-  Entity cameraEntity = this->impl->cameraSensorEntity;
+  Entity cameraEntity = this->impl->cameraSensor.Entity();
   this->impl->cameraName =
       removeParentScope(scopedName(cameraEntity, _ecm, "::", false), "::");
 
