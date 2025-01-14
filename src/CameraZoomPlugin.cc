@@ -178,11 +178,15 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
   }
 
   // Return if scene not ready or no sensors available.
-  if (this->scene == nullptr ||
-      !this->scene->IsInitialized() ||
-      this->scene->SensorCount() == 0)
+  if (!this->scene || !this->scene->IsInitialized())
   {
-    gzwarn << "No scene or camera sensors available.\n";
+    gzwarn << "No scene available." << std::endl;
+    return;
+  }
+
+  if (this->scene->SensorCount() == 0)
+  {
+    gzwarn << "No camera sensors available." << std::endl;
     return;
   }
 
@@ -209,7 +213,7 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
 //////////////////////////////////////////////////
 void CameraZoomPlugin::Impl::OnRenderTeardown()
 {
-  gzdbg << "CameraZoomPlugin disabled.\n";
+  gzdbg << "CameraZoomPlugin disabled." << std::endl;
 
   this->camera.reset();
   this->scene.reset();
@@ -261,7 +265,7 @@ void CameraZoomPlugin::Configure(
   if (!this->impl->cameraSensor.Valid(_ecm))
   {
     gzerr << "CameraZoomPlugin must be attached to a camera sensor. "
-             "Failed to initialize.\n";
+             "Failed to initialize." << std::endl;
     return;
   }
 
@@ -269,11 +273,11 @@ void CameraZoomPlugin::Configure(
   if (auto maybeName = this->impl->cameraSensor.Name(_ecm))
   {
     gzdbg << "CameraZoomPlugin attached to sensor ["
-          << maybeName.value() << "].\n";
+          << maybeName.value() << "]." << std::endl;;
   }
   else
   {
-    gzerr << "Camera sensor has invalid name.\n";
+    gzerr << "Camera sensor has invalid name." << std::endl;
     return;
   }
 
@@ -292,7 +296,7 @@ void CameraZoomPlugin::Configure(
   if (!this->impl->parentModel.Valid(_ecm))
   {
     gzerr << "CameraZoomPlugin - parent model not found. "
-             "Failed to initialize.\n";
+             "Failed to initialize." << std::endl;
     return;
   }
 
@@ -302,7 +306,7 @@ void CameraZoomPlugin::Configure(
   if (!this->impl->world.Valid(_ecm))
   {
     gzerr << "CameraZoomPlugin - world not found. "
-             "Failed to initialize.\n";
+             "Failed to initialize." << std::endl;
     return;
   }
 
@@ -336,7 +340,7 @@ void CameraZoomPlugin::Configure(
       &CameraZoomPlugin::Impl::OnZoom, this->impl.get());
 
   gzdbg << "CameraZoomPlugin subscribing to messages on "
-         << "[" << this->impl->zoomTopic << "]\n";
+         << "[" << this->impl->zoomTopic << "]." << std::endl;
 
   // Connections
   this->impl->connections.push_back(
@@ -379,7 +383,7 @@ void CameraZoomPlugin::PreUpdate(
       std::numeric_limits<double>::epsilon())
     {
       gzwarn << "Requested zoom command of " << requestedZoomCmd
-        << " has been clamped to " << clampedZoomCmd << ".\n";
+        << " has been clamped to " << clampedZoomCmd << "." << std::endl;
     }
     this->impl->goalHfov = this->impl->refHfov / clampedZoomCmd;
     this->impl->zoomChanged = false;
@@ -453,7 +457,7 @@ void CameraZoomPlugin::PostUpdate(
   this->impl->cameraName =
       removeParentScope(scopedName(cameraEntity, _ecm, "::", false), "::");
 
-  gzdbg << "Camera name: [" << this->impl->cameraName << "].\n";
+  gzdbg << "Camera name: [" << this->impl->cameraName << "]." << std::endl;
 }
 
 //////////////////////////////////////////////////
