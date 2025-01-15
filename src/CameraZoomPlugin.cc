@@ -15,6 +15,28 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+Notes:
+  This plugin should work for  the Gazebo camera types.
+  These are currently:
+    - BoundingBoxCamera
+    - Camera
+    - DepthCamera
+    - RgbdCamera
+    - SegmentationCamera
+    - ThermalCamera
+
+  It will not work for the following camera types:
+    - LogicalCamera (not a rendering camera)
+    - WideAngleCamera (does not support zooming)
+
+  Some of these camera sensors register more than one rendering camera with
+  the scene. The rendering cameras may be retrieved by name from the scene
+  using the function gz::rendering::BaseScene::SensorByName. The second camera
+  is typically named "{Name}_rgbCamera" where "{Name}" is the name of the
+  primary camera.
+*/
+
 #include "CameraZoomPlugin.hh"
 
 #include <algorithm>
@@ -39,12 +61,18 @@
 #include <gz/rendering/RenderingIface.hh>
 #include <gz/rendering/Scene.hh>
 
+#include <gz/sim/components/BoundingBoxCamera.hh>
 #include <gz/sim/components/Camera.hh>
+#include <gz/sim/components/DepthCamera.hh>
 #include <gz/sim/components/Model.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/ParentEntity.hh>
 #include <gz/sim/components/Link.hh>
+#include <gz/sim/components/RgbdCamera.hh>
+#include <gz/sim/components/SegmentationCamera.hh>
 #include <gz/sim/components/Sensor.hh>
+#include <gz/sim/components/ThermalCamera.hh>
+#include <gz/sim/components/WideAngleCamera.hh>
 #include <gz/sim/components/World.hh>
 #include <gz/sim/rendering/Events.hh>
 #include "gz/sim/Events.hh"
@@ -67,8 +95,16 @@ namespace systems {
 //////////////////////////////////////////////////
 class CameraZoomPlugin::Impl
 {
+  public: void SensorSdfFromEntity(
+    const Entity &_entity,
+    EntityComponentManager &_ecm,
+    sdf::Sensor* _sensorSdf);
+
   /// \brief Handle a zoom command.
   public: void OnZoom(const msgs::Double &_msg);
+
+  /// \brief Reset the camera and scene when the tear down event is received.
+  public: void OnRenderTeardown();
 
   /// \brief Initialise the rendering camera.
   public: void InitialiseCamera();
@@ -81,6 +117,10 @@ class CameraZoomPlugin::Impl
 
   /// \brief Camera sensor.
   public: Sensor cameraSensor{kNullEntity};
+
+  /// \brief Camera sensor SDF.
+  public: sdf::Camera* cameraSdf{nullptr};
+  public: sdf::Sensor sensorSdf;
 
   /// \brief Name of the camera.
   public: std::string cameraName;
@@ -116,20 +156,20 @@ class CameraZoomPlugin::Impl
   /// \brief Flag set to true if the plugin is correctly initialised.
   public: bool isValidConfig{false};
 
-  /// \brief Connections to event callbacks.
-  public: std::vector<common::ConnectionPtr> connections;
+  /// \brief Connection to the render-teardowm event.
+  public: common::ConnectionPtr renderTeardownConn;
 
   /// \brief Transport node for subscriptions.
   public: transport::Node node;
-
-  /// \brief Reset the camera and scene when the tear down event is received.
-  public: void OnRenderTeardown();
 
   //// \brief Pointer to the rendering scene
   public: rendering::ScenePtr scene;
 
   /// \brief Pointer to the rendering camera
   public: rendering::CameraPtr camera;
+
+  /// \brief Pointer to second RGB camera, if present.
+  public: rendering::CameraPtr rgbCamera;
 
   /// \brief Convert from focal length to FOV for a rectilinear lens
   /// \ref https://en.wikipedia.org/wiki/Focal_length
@@ -154,6 +194,62 @@ class CameraZoomPlugin::Impl
   public: static double SensorWidth(
       double focalLength, double fov);
 };
+
+//////////////////////////////////////////////////
+void CameraZoomPlugin::Impl::SensorSdfFromEntity(
+    const Entity &_entity,
+    EntityComponentManager &_ecm,
+    sdf::Sensor* _sensorSdf)
+{
+  if (_ecm.EntityHasComponentType(_entity,
+    components::BoundingBoxCamera::typeId))
+  {
+    auto comp = _ecm.Component<components::BoundingBoxCamera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::Camera::typeId))
+  {
+    auto comp = _ecm.Component<components::Camera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::DepthCamera::typeId))
+  {
+    auto comp = _ecm.Component<components::DepthCamera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::RgbdCamera::typeId))
+  {
+    auto comp = _ecm.Component<components::RgbdCamera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::SegmentationCamera::typeId))
+  {
+    auto comp =
+      _ecm.Component<components::SegmentationCamera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::ThermalCamera::typeId))
+  {
+    auto comp = _ecm.Component<components::ThermalCamera>(_entity);
+    if (comp)
+      *_sensorSdf = comp->Data();
+  }
+  else if (_ecm.EntityHasComponentType(_entity,
+    components::WideAngleCamera::typeId))
+  {
+    gzerr << "WideAngleCamera does not support zooming." << std::endl;
+  }
+}
 
 //////////////////////////////////////////////////
 void CameraZoomPlugin::Impl::OnZoom(const msgs::Double &_msg)
@@ -207,6 +303,28 @@ void CameraZoomPlugin::Impl::InitialiseCamera()
             << std::endl;
       return;
     }
+
+    // See gz::sim::systems::Sensors::CreateSensor
+    if (this->sensorSdf.Type() == sdf::SensorType::BOUNDINGBOX_CAMERA ||
+        this->sensorSdf.Type() == sdf::SensorType::SEGMENTATION_CAMERA)
+    {
+      auto rgbSensor =
+        this->scene->SensorByName(this->cameraName  + "_rgbCamera");
+      if (!rgbSensor)
+      {
+        gzerr << "Unable to find sensor: ["
+              << this->cameraName << "_rgbCamera]." << std::endl;
+        return;
+      }
+      this->rgbCamera = std::dynamic_pointer_cast<rendering::Camera>(rgbSensor);
+      if (!this->camera)
+      {
+        gzerr << "[" << this->cameraName << "_rgbCamera] is not a camera."
+              << std::endl;
+        return;
+      }
+    }
+
   }
 }
 
@@ -281,6 +399,15 @@ void CameraZoomPlugin::Configure(
     return;
   }
 
+  // Get the SDF for the sensor.
+  this->impl->SensorSdfFromEntity(_entity, _ecm, &this->impl->sensorSdf);
+  this->impl->cameraSdf = this->impl->sensorSdf.CameraSensor();
+  if (!this->impl->cameraSdf)
+  {
+    //! @todo (srmainwaring) - add error message
+    return;
+  }
+
   // Retrieve parent model.
   if (auto maybeParentLink = this->impl->cameraSensor.Parent(_ecm))
   {
@@ -343,10 +470,10 @@ void CameraZoomPlugin::Configure(
          << "[" << this->impl->zoomTopic << "]." << std::endl;
 
   // Connections
-  this->impl->connections.push_back(
+  this->impl->renderTeardownConn =
       _eventMgr.Connect<gz::sim::events::RenderTeardown>(
           std::bind(&CameraZoomPlugin::Impl::OnRenderTeardown,
-          this->impl.get())));
+          this->impl.get()));
 
   this->impl->isValidConfig = true;
 }
@@ -368,11 +495,6 @@ void CameraZoomPlugin::PreUpdate(
     return;
   }
 
-  Entity cameraEntity = this->impl->cameraSensor.Entity();
-  auto comp = _ecm.Component<components::Camera>(cameraEntity);
-  if (!comp)
-    return;
-
   if (this->impl->zoomChanged)
   {
     // Only calculate goal once each time zoom is changed.
@@ -389,20 +511,14 @@ void CameraZoomPlugin::PreUpdate(
     this->impl->zoomChanged = false;
   }
 
-  // Update component.
-  sdf::Sensor &sensor = comp->Data();
-  sdf::Camera *cameraSdf = sensor.CameraSensor();
-  if (!cameraSdf)
-    return;
-
-  const auto oldHfov = cameraSdf->HorizontalFov().Radian();
+  const auto oldHfov = this->impl->cameraSdf->HorizontalFov().Radian();
 
   // Goal is achieved, nothing to update.
   if (std::abs(this->impl->goalHfov - oldHfov) <
     std::numeric_limits<double>::epsilon())
     return;
 
-  const auto curFocalLength = cameraSdf->LensFocalLength();
+  const auto curFocalLength = this->impl->cameraSdf->LensFocalLength();
 
   // This value should be static every iteration.
   const auto sensorWidth = CameraZoomPlugin::Impl::SensorWidth(
@@ -437,12 +553,21 @@ void CameraZoomPlugin::PreUpdate(
   const auto newHfov = CameraZoomPlugin::Impl::FocalLengthToFov(
       sensorWidth, newFocalLength);
   // Update rendering camera with the latest focal length.
-  cameraSdf->SetHorizontalFov(newHfov);
+  this->impl->cameraSdf->SetHorizontalFov(newHfov);
+
+  //! @todo(srmainwaring) handle different component types
+  Entity cameraEntity = this->impl->cameraSensor.Entity();
   _ecm.SetChanged(cameraEntity, components::Camera::typeId,
     ComponentState::OneTimeChange);
 
-  // Update rendering camera.
+  // Update primary camera.
   this->impl->camera->SetHFOV(newHfov);
+
+  // Update second camera if present.
+  if (this->impl->rgbCamera)
+  {
+    this->impl->rgbCamera->SetHFOV(newHfov);
+  }
 }
 
 //////////////////////////////////////////////////
