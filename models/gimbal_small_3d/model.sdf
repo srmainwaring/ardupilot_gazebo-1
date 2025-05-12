@@ -190,6 +190,7 @@
       </collision>
       <sensor name="camera" type="camera">
         <gz_frame_id>pitch_link</gz_frame_id>
+        <frame_id>pitch_link</frame_id>
         <pose>0 0 0 -1.57 -1.57 0</pose>
         <camera>
           <horizontal_fov>2.0</horizontal_fov>
