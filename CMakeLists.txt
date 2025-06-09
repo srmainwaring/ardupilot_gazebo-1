@@ -128,6 +128,17 @@ target_link_libraries(GstCameraPlugin PRIVATE
   ${GST_LINK_LIBRARIES}
 )
 
+add_library(ServoPlugin
+  SHARED
+  src/ServoPlugin.cc
+)
+target_include_directories(ServoPlugin PRIVATE
+  include
+)
+target_link_libraries(ServoPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
 # --------------------------------------------------------------------------- #
 # Install.
 
@@ -137,6 +148,7 @@ install(
   ParachutePlugin
   CameraZoomPlugin
   GstCameraPlugin
+  ServoPlugin
   DESTINATION lib/${PROJECT_NAME}
 )
 
