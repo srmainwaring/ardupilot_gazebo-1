@@ -1,0 +1,185 @@
+<?xml version="1.0" ?>
+<!--
+1. Services
+
+/world/servo/list_parameters
+/world/servo/get_parameter
+/world/servo/set_parameter
+
+2. List parameters
+
+gz param -r /world/servo -l      
+
+Listing parameters, registry namespace [/world/servo]...
+
+ServoPlugin..i_gain            [gz_msgs.Double]
+ServoPlugin..d_gain            [gz_msgs.Double]
+ServoPlugin..p_gain            [gz_msgs.Double]
+
+3. Set parameter
+
+gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1.0"
+
+-->
+<sdf version="1.9">
+  <world name="servo">
+    <physics name="1ms" type="ignore">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin name="gz::sim::systems::Physics"
+      filename="gz-sim-physics-system">
+    </plugin>
+    <plugin name="gz::sim::systems::Sensors"
+      filename="gz-sim-sensors-system">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin name="gz::sim::systems::UserCommands"
+      filename="gz-sim-user-commands-system">
+    </plugin>
+    <plugin name="gz::sim::systems::SceneBroadcaster"
+      filename="gz-sim-scene-broadcaster-system">
+    </plugin>
+    <plugin name="gz::sim::systems::Imu"
+      filename="gz-sim-imu-system">
+    </plugin>
+
+    <scene>
+      <ambient>1.0 1.0 1.0</ambient>
+      <background>0.8 0.8 0.8</background>
+      <sky></sky>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.8 0.8 0.8 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- servo -->
+    <model name="servo">
+      <pose>0 0 0.005 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>120.0</mass>
+          <inertia>
+            <ixx>2.501</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>2.501</iyy>
+            <iyz>0</iyz>
+            <izz>5</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.5 0.5 0.01</size>
+            </box>
+          </geometry>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 0.5 0.01</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+      <joint name="world_fixed" type="fixed">
+        <parent>world</parent>
+        <child>base_link</child>
+      </joint>
+
+      <link name="servo_arm_link">
+        <pose>0 0 0.1 0 0 0</pose>
+        <inertial>
+          <mass>0.6</mass>
+          <inertia>
+            <ixx>0.032</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.032</iyy>
+            <iyz>0</iyz>
+            <izz>0.00012</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.25 0.1 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.8 0.2 1</ambient>
+            <diffuse>0.8 0 0 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.25 0.1 0.05</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+ 
+      <joint name="servo_arm_joint" type="revolute">
+        <pose degrees="true">0 0 -0.5 0 0 0</pose>
+        <parent>base_link</parent>
+        <child>servo_arm_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+        </axis>
+      </joint>
+
+      <!-- plugins -->
+      <plugin name="gz::sim::systems::JointStatePublisher"
+        filename="gz-sim-joint-state-publisher-system">
+      </plugin>
+
+      <plugin name="ServoPlugin"
+        filename="ServoPlugin">
+        <joint_name>servo_arm_joint</joint_name>
+      </plugin>
+
+    </model>
+
+  </world>
+</sdf>
