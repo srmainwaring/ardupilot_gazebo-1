@@ -114,9 +114,24 @@ def set_param(registry, name, value, timeout_ms):
 def main():
     """Example demonstrating how to set and get dynamic parameters"""
     timeout_ms = 1000
-    registry = "/world/servo"
 
-    prefix = "ServoPlugin.servo.servo.servo_arm_joint."
+    # world_name = "servo"
+    # model_name = "servo"
+    # joint_name = "servo_arm_joint"
+    # system_name = "ServoPlugin"
+
+    # world_name = "default"
+    # model_name = "joint_position_controller_demo"
+    # joint_name = "j1"
+    # system_name = "JointPositionController"
+
+    world_name = "empty"
+    model_name = "helicopter_dual_transverse.rotor_head_ccw"
+    joint_name = "servo_arm_1_joint"
+    system_name = "JointPositionController"
+
+    registry = f"/world/{world_name}"
+    prefix = f"{system_name}.{world_name}.{model_name}.{joint_name}."
     names = [
         "p_gain",
         "i_gain",
@@ -128,25 +143,19 @@ def main():
         "cmd_offset",
     ]
 
-    # set params
-    for i, name in enumerate(names):
-        scopedName = prefix + name
-        value = i * 0.1
-        try:
-            set_param(registry, scopedName, value, timeout_ms)
-        except InvalidParameterError as ex:
-            print(ex)
-            # return
-
     # get params
-    for name in names:
+    print(f"Get PID params")
+    print(f"world_name: {world_name}")
+    print(f"model_name: {model_name}")
+    print(f"joint_name: {joint_name}")
+    for i, name in enumerate(names):
         scopedName = prefix + name
         try:
             value = get_param(registry, scopedName, timeout_ms)
             print(f"{name}: {value.data}")
+
         except InvalidParameterError as ex:
             print(ex)
-            return
 
 
 if __name__ == "__main__":

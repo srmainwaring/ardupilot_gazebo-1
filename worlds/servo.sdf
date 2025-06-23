@@ -20,6 +20,14 @@ ServoPlugin..p_gain            [gz_msgs.Double]
 
 gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1.0"
 
+
+4. Notes
+- cmd_offset is not a feed-forward parameter in the usual sense, as it is not
+  multiplied by the input cmd. Instead it is simply a constant offset.
+
+  out = cmd_offset (+ other terms)
+
+
 -->
 <sdf version="1.9">
   <world name="servo">
