@@ -3,9 +3,13 @@ Script to subscribe to forces and torques published by the
 VisualizeForces plugin.
 
 For this script:
-- heli_dual_transverse mounted on gimble
-- all axes of rotation locked (angle derived from blade world pose)
+- helicopter fixed to the world in a model named `stand`
+- all axes of rotation locked (angles are measured in the world frame)
 
+
+Bridge topics from Gazebo to ROS 2
+
+  ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:=$(pwd)/src/ardupilot_sitl_models/Gazebo/config/helicopter.yaml
 
 """
 
@@ -28,6 +32,22 @@ from gz.msgs11.double_pb2 import Double
 from gz.msgs11.model_pb2 import Model
 from gz.transport14 import Node
 
+def wrap_2pi(angle: float) -> float:
+    """
+    Return an angle constrained to [0, 2 * pi]
+
+    :param angle: An angle in radians
+    :type angle: float
+    :return: The angle in radians wrapped to [0, 2 * pi]
+    :rtype: float
+    """
+    while (angle < 0.0) or (angle > 2 * math.pi):
+        if angle < 0.0:
+            angle += 2 * math.pi
+        else:
+            angle -= 2 * math.pi
+
+    return angle
 
 def wrap_pi(angle: float) -> float:
     """
@@ -95,7 +115,7 @@ class JointStateSubscriber:
 
 class ForceTorqueSubscriber:
     def __init__(self):
-        model = "rotor_head_ccw"
+        model = "rotor_head_cw"
         link = "blade_1_link"
 
         self.node = Node()
@@ -131,13 +151,13 @@ def main():
 
     # Configuration
     world_name = "empty"
-    model_name = "rotor_head_ccw"
+    model_name = "rotor_head_cw"
 
     # Create subscribers
     force_sub = ForceTorqueSubscriber()
     joint_sub = JointStateSubscriber(
         world_name,
-        f"gimbal/model/helicopter_dual_transverse/model/{model_name}",
+        f"stand/model/helicopter/model/{model_name}",
     )
 
     # control the update rate
@@ -160,6 +180,7 @@ def main():
     sample_lift_t_z = []
     sample_drag_f_xy = []
     sample_blade_pitch = []
+    sample_blade_flap = []
     sample_rotor_angle = []
     sample_cp_pos_x = []
     sample_cp_pos_y = []
@@ -167,26 +188,26 @@ def main():
     """
     Notes:
 
-    Relationship between rotor_head_ccw main joint position and blade_1_link
+    Relationship between rotor_head_cw main joint position and blade_1_link
     position in world frame.
 
     After reset (t=0)
 
     blade joint state
-    - message is a Model
-    - extract the Joint from the model
+    - message type is `Model`
+    - extract the `Joint` from the model
     - in the helicopter model the joint x-axis intially points to the front
       of the vehicle (which is initially aligned to the world y-axis)   
 
     blade force
-    - message is EntityWrench
+    - message type is `EntityWrench`
     - entity (link) pose is in the world frame
     - pose is zero when the link x-axis aligns with the world x-axis (east)
     - this is 90 deg out of phase with the rotor main_joint  
     - there is a further 13 deg offset between the rotor main link and the
       rotor base
 
-    blade_1_link x-axis aligned to front of vehicle (north) 
+    blade_1_link x-axis aligned to rear of vehicle (south) 
     blade angle = 90
     rotor angle = 167 = 180 - 13
 
@@ -196,7 +217,7 @@ def main():
 
 
     Observations:
-    - blade lift is getting clipped once the blade pitch reaches cla_atall
+    - blade lift is getting clipped once the blade pitch reaches cla_stall
       which is about 11 deg
     - the clipping gets worse as the collective is increased
     
@@ -211,6 +232,7 @@ def main():
 
     blade_angle_offset = math.radians(-90)
     rotor_angle_offset = math.radians(-180 + 13)
+    zero_angle_offset = math.radians(180)
 
     try:
         while sample_count < sample_count_max:
@@ -218,21 +240,30 @@ def main():
             if (time.monotonic() - last_sample_time) > sample_period:
 
                 # process joint states
-                blade_joint_state = joint_sub.get_joint_state("blade_grip_1_joint")
-                if blade_joint_state is not None:
+                blade_grip_1_joint_state = joint_sub.get_joint_state("blade_grip_1_joint")
+                if blade_grip_1_joint_state is not None:
                     joint_pos = JointStateSubscriber.get_axis1_position(
-                        blade_joint_state
+                        blade_grip_1_joint_state
                     )
                     joint_pos_deg = math.degrees(joint_pos)
                     sample_blade_pitch.append(joint_pos_deg)
                     # print(f"blade pitch: {joint_pos_deg:.1f}")
+
+                blade_1_joint_state = joint_sub.get_joint_state("blade_1_joint")
+                if blade_1_joint_state is not None:
+                    joint_pos = JointStateSubscriber.get_axis1_position(
+                        blade_1_joint_state
+                    )
+                    joint_pos_deg = math.degrees(joint_pos)
+                    sample_blade_flap.append(joint_pos_deg)
+                    # print(f"blade flap: {joint_pos_deg:.1f}")
 
                 rotor_joint_state = joint_sub.get_joint_state("main_joint")
                 if rotor_joint_state is not None:
                     joint_pos = JointStateSubscriber.get_axis1_position(
                         rotor_joint_state
                     )
-                    joint_pos_rad = wrap_pi(joint_pos + rotor_angle_offset)
+                    joint_pos_rad = wrap_2pi(joint_pos + rotor_angle_offset + zero_angle_offset)
                     joint_pos_deg = math.degrees(joint_pos_rad)
                     sample_rotor_angle.append(joint_pos_deg)
                     # print(f"blade angle: {joint_pos_deg:.1f}")
@@ -266,7 +297,7 @@ def main():
                 drag_f = drag_wrench.wrench.force
                 # drag_t = drag_wrench.wrench.torque
 
-                angle_rad = wrap_pi(lift_angles[2] + blade_angle_offset)
+                angle_rad = wrap_2pi(lift_angles[2] + blade_angle_offset + zero_angle_offset)
                 angle_deg = math.degrees(angle_rad)
                 drag_f_xy = math.sqrt(drag_f.x * drag_f.x + drag_f.y * drag_f.y)
 
@@ -311,7 +342,7 @@ def main():
     # labels
     roll = 1500
     pitch = 1000
-    collective = 1000
+    collective = 1500
 
     # convert to np.array and flip sign on blade pitch (due to joint orientation / rotor direction)
     sample_angles = np.array(sample_angles)
@@ -321,7 +352,8 @@ def main():
     sample_lift_t_y = np.array(sample_lift_t_y)
     sample_lift_t_z = np.array(sample_lift_t_z)
     sample_rotor_angle = np.array(sample_rotor_angle)
-    sample_blade_pitch = np.array(sample_blade_pitch) * -1.0
+    sample_blade_pitch = np.array(sample_blade_pitch) * 1.0
+    sample_blade_flap = np.array(sample_blade_flap) * 1.0
 
     def plot_blade_pitch(sample_rotor_angle, sample_blade_pitch):
         indices = np.argsort(sample_rotor_angle)
@@ -329,7 +361,7 @@ def main():
         # setup plot
         ax = plt.figure().add_subplot()
         ax.grid(True, which='both')
-        ax.set_xlim(-180.0, 180.0)
+        ax.set_xlim(0.0, 360.0)
         ax.set_ylim(-15.0, 25.0)
         ax.set_xlabel(f"rotor angle (deg)")
         ax.set_ylabel(f"blade pitch (deg)")
@@ -337,6 +369,25 @@ def main():
             f"Cyclic blade pitch: roll: {roll}, pitch: {pitch}, collective: {collective}"
         )
         ax.step(sample_rotor_angle[indices], sample_blade_pitch[indices], label=r"pitch")
+        ax.legend()
+
+        plt.show()
+
+    def plot_blade_pitch_flap(sample_rotor_angle, sample_blade_pitch, sample_blade_flap):
+        indices = np.argsort(sample_rotor_angle)
+
+        # setup plot
+        ax = plt.figure().add_subplot()
+        ax.grid(True, which='both')
+        ax.set_xlim(0.0, 360.0)
+        ax.set_ylim(-15.0, 25.0)
+        ax.set_xlabel(f"rotor angle (deg)")
+        ax.set_ylabel(f"blade pitch / flap (deg)")
+        ax.set_title(
+            f"Cyclic blade pitch / flap: roll: {roll}, pitch: {pitch}, collective: {collective}"
+        )
+        ax.step(sample_rotor_angle[indices], sample_blade_pitch[indices], label=r"pitch")
+        ax.step(sample_rotor_angle[indices], sample_blade_flap[indices], label=r"flap")
         ax.legend()
 
         plt.show()
@@ -351,7 +402,7 @@ def main():
         # setup plot
         ax = plt.figure().add_subplot()
         ax.grid(True, which='both')
-        ax.set_xlim(-180.0, 180.0)
+        ax.set_xlim(0.0, 360.0)
         ax.set_ylim(-50.0, 50.0)
         ax.set_xlabel(f"rotor angle (deg)")
         ax.set_ylabel(f"lift (N)")
@@ -369,7 +420,7 @@ def main():
         # setup plot
         ax = plt.figure().add_subplot()
         ax.grid(True, which='both')
-        ax.set_xlim(-180.0, 180.0)
+        ax.set_xlim(0.0, 360.0)
         ax.set_ylim(-10.0, 10.0)
         ax.set_xlabel(f"rotor angle (deg)")
         ax.set_ylabel(f"lift torque (N.m)")
@@ -391,9 +442,10 @@ def main():
     print(f"pos_x: max: {np.max(sample_cp_pos_x)}, min: {np.min(sample_cp_pos_x)}")
     print(f"pos_y: max: {np.max(sample_cp_pos_y)}, min: {np.min(sample_cp_pos_y)}")
 
-    plot_blade_pitch(sample_rotor_angle, sample_blade_pitch)
+    # plot_blade_pitch(sample_rotor_angle, sample_blade_pitch)
+    plot_blade_pitch_flap(sample_rotor_angle, sample_blade_pitch, sample_blade_flap)
     plot_blade_lift_f(sample_angles, sample_lift_f_z, sample_drag_f_xy)
-    plot_blade_lift_t(sample_angles, sample_lift_t_x, sample_lift_t_y, sample_lift_t_z)
+    # plot_blade_lift_t(sample_angles, sample_lift_t_x, sample_lift_t_y, sample_lift_t_z)
 
 
 if __name__ == "__main__":
