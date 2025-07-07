@@ -173,17 +173,21 @@ def main():
 
     sample_count_max = 1000
     sample_count = 0
-    sample_angles = []
+
+    # lift drag samples
+    sample_lift_angles = []
     sample_lift_f_z = []
     sample_lift_t_x = []
     sample_lift_t_y = []
     sample_lift_t_z = []
     sample_drag_f_xy = []
-    sample_blade_pitch = []
-    sample_blade_flap = []
-    sample_rotor_angle = []
     sample_cp_pos_x = []
     sample_cp_pos_y = []
+
+    # joint state samples 
+    sample_rotor_angle = []
+    sample_blade_pitch = []
+    sample_blade_flap = []
 
     """
     Notes:
@@ -203,36 +207,26 @@ def main():
     - message type is `EntityWrench`
     - entity (link) pose is in the world frame
     - pose is zero when the link x-axis aligns with the world x-axis (east)
-    - this is 90 deg out of phase with the rotor main_joint  
-    - there is a further 13 deg offset between the rotor main link and the
-      rotor base
-
-    blade_1_link x-axis aligned to rear of vehicle (south) 
-    blade angle = 90
-    rotor angle = 167 = 180 - 13
-
-    To align:
-    blade angle -= 90
-    rotor angle -= 167
-
+    
+    main_joint position
+    - when initialised the main joint position = 0
+    - body fixed hub frame position = 0 when main joint position = 13
 
     Observations:
     - blade lift is getting clipped once the blade pitch reaches cla_stall
       which is about 11 deg
     - the clipping gets worse as the collective is increased
     
-
     Additional measurements required
     - what are the torques about the x-axis and y-axis when the swashplate is
       pitched forward (rc 2 1000)
 
-
-
     """
+    # rotate from the world fram to the rotor hub frame
+    enu_to_hub_offset = math.radians(90)
 
-    blade_angle_offset = math.radians(-90)
-    rotor_angle_offset = math.radians(-180 + 13)
-    zero_angle_offset = math.radians(180)
+    # rotate from rotor frame to hub frame (rotor frame 13 deg ahead)
+    rotor_to_hub_offset = math.radians(-13)
 
     try:
         while sample_count < sample_count_max:
@@ -263,13 +257,16 @@ def main():
                     joint_pos = JointStateSubscriber.get_axis1_position(
                         rotor_joint_state
                     )
-                    joint_pos_rad = wrap_2pi(joint_pos + rotor_angle_offset + zero_angle_offset)
+                    joint_pos_rad = wrap_2pi(joint_pos)
                     joint_pos_deg = math.degrees(joint_pos_rad)
-                    sample_rotor_angle.append(joint_pos_deg)
-                    # print(f"blade angle: {joint_pos_deg:.1f}")
 
-                # rotor angle and blade pitch
-                # print(f"angle: {joint_pos_deg:.1f}, pitch: {joint_pos_deg:.1f}")
+                    main_joint_pos_rad = wrap_2pi(joint_pos + rotor_to_hub_offset)
+                    main_joint_pos_deg = math.degrees(main_joint_pos_rad)
+
+                    rotor_pos_deg = main_joint_pos_deg
+                    sample_rotor_angle.append(rotor_pos_deg)
+
+                    # print(f"rotor_pos_deg: {rotor_pos_deg:.1f}")
 
                 # process wrench message
                 wrench = copy.deepcopy(force_sub.last_msg)
@@ -297,8 +294,10 @@ def main():
                 drag_f = drag_wrench.wrench.force
                 # drag_t = drag_wrench.wrench.torque
 
-                angle_rad = wrap_2pi(lift_angles[2] + blade_angle_offset + zero_angle_offset)
+                # lift-drag wrench pose is in the ENU world frame
+                angle_rad = wrap_2pi(lift_angles[2] + enu_to_hub_offset)
                 angle_deg = math.degrees(angle_rad)
+
                 drag_f_xy = math.sqrt(drag_f.x * drag_f.x + drag_f.y * drag_f.y)
 
                 # calculate the torque about the rotor shaft
@@ -310,7 +309,7 @@ def main():
                 f = np.array([0.0, 0.0, lift_f.z])
                 lift_t = np.cross(r, f) 
 
-                sample_angles.append(angle_deg)
+                sample_lift_angles.append(angle_deg)
                 sample_lift_f_z.append(lift_f.z)
                 sample_lift_t_x.append(lift_t[0])
                 sample_lift_t_y.append(lift_t[1])
@@ -320,11 +319,9 @@ def main():
                 sample_cp_pos_y.append(lift_wrench.pose.position.y)
 
                 # print(
-                #     f"angle: {angle_deg:.1f}, "
-                #     f"lift: {lift_f.z:.1f}, "
-                #     f"drag: {drag_f_xy:.1f}, "
-                #     f"lift_t.x: {lift_t.x:.1f}, "
-                #     f"lift_t.y: {lift_t.y:.1f}"
+                #     f"rotor_angle: {rotor_pos_deg:.1f}, "
+                #     f"lift_angle: {angle_deg:.1f}, "
+                #     f"diff: {rotor_pos_deg - angle_deg:.1f}"
                 # )
 
                 sample_count += 1
@@ -341,22 +338,25 @@ def main():
 
     # labels
     roll = 1500
-    pitch = 1000
-    collective = 1500
+    pitch = 2000
+    collective = 1000
 
     # convert to np.array and flip sign on blade pitch (due to joint orientation / rotor direction)
-    sample_angles = np.array(sample_angles)
+    # lift drag samples
+    sample_lift_angles = np.array(sample_lift_angles)
     sample_lift_f_z = np.array(sample_lift_f_z)
     sample_drag_f_xy = np.array(sample_drag_f_xy)
     sample_lift_t_x = np.array(sample_lift_t_x)
     sample_lift_t_y = np.array(sample_lift_t_y)
     sample_lift_t_z = np.array(sample_lift_t_z)
+
+    # joint state samples
     sample_rotor_angle = np.array(sample_rotor_angle)
     sample_blade_pitch = np.array(sample_blade_pitch) * 1.0
     sample_blade_flap = np.array(sample_blade_flap) * 1.0
 
-    def plot_blade_pitch(sample_rotor_angle, sample_blade_pitch):
-        indices = np.argsort(sample_rotor_angle)
+    def plot_blade_pitch(rotor_angle, blade_pitch):
+        indices = np.argsort(rotor_angle)
 
         # setup plot
         ax = plt.figure().add_subplot()
@@ -368,13 +368,13 @@ def main():
         ax.set_title(
             f"Cyclic blade pitch: roll: {roll}, pitch: {pitch}, collective: {collective}"
         )
-        ax.step(sample_rotor_angle[indices], sample_blade_pitch[indices], label=r"pitch")
+        ax.step(rotor_angle[indices], blade_pitch[indices], label=r"pitch")
         ax.legend()
 
         plt.show()
 
-    def plot_blade_pitch_flap(sample_rotor_angle, sample_blade_pitch, sample_blade_flap):
-        indices = np.argsort(sample_rotor_angle)
+    def plot_blade_pitch_flap(rotor_angle, blade_pitch, blade_flap):
+        indices = np.argsort(rotor_angle)
 
         # setup plot
         ax = plt.figure().add_subplot()
@@ -386,17 +386,17 @@ def main():
         ax.set_title(
             f"Cyclic blade pitch / flap: roll: {roll}, pitch: {pitch}, collective: {collective}"
         )
-        ax.step(sample_rotor_angle[indices], sample_blade_pitch[indices], label=r"pitch")
-        ax.step(sample_rotor_angle[indices], sample_blade_flap[indices], label=r"flap")
+        ax.step(rotor_angle[indices], blade_pitch[indices], label=r"pitch")
+        ax.step(rotor_angle[indices], blade_flap[indices], label=r"flap")
         ax.legend()
 
         plt.show()
 
-    def plot_blade_lift_f(sample_angles, sample_lift_f_z, sample_drag_f_xy):
-        indices = np.argsort(sample_angles)
-        # unique_sample_angles, indices, unique_inverse, unique_counts = np.unique(
-        #     sample_angles, return_index=True, return_inverse=True, return_counts=True)
-        # print(unique_sample_angles.shape)
+    def plot_blade_lift_f(rotor_angle, lift_f_z, drag_f_xy):
+        indices = np.argsort(rotor_angle)
+        # unique_rotor_angles, indices, unique_inverse, unique_counts = np.unique(
+        #     rotor_angle, return_index=True, return_inverse=True, return_counts=True)
+        # print(unique_rotor_angles.shape)
         # print([x for x in unique_counts if x > 1])
 
         # setup plot
@@ -409,13 +409,13 @@ def main():
         ax.set_title(
             f"Cyclic blade lift: roll: {roll}, pitch: {pitch}, collective: {collective}"
         )
-        ax.step(sample_angles[indices], sample_lift_f_z[indices], label=r"$F_z$")
+        ax.step(rotor_angle[indices], lift_f_z[indices], label=r"$F_z$")
         ax.legend()
 
         plt.show()
 
-    def plot_blade_lift_t(sample_angles, sample_lift_t_x, sample_lift_t_y, sample_lift_t_z):
-        indices = np.argsort(sample_angles)
+    def plot_blade_lift_t(rotor_angle, lift_t_x, lift_t_y, lift_t_z):
+        indices = np.argsort(rotor_angle)
 
         # setup plot
         ax = plt.figure().add_subplot()
@@ -427,9 +427,9 @@ def main():
         ax.set_title(
             f"Cyclic blade lift torque: roll: {roll}, pitch: {pitch}, collective: {collective}"
         )
-        ax.step(sample_angles[indices], sample_lift_t_x[indices], label=r"$\tau_x$")
-        ax.step(sample_angles[indices], sample_lift_t_y[indices], label=r"$\tau_y$")
-        ax.step(sample_angles[indices], sample_lift_t_z[indices], label=r"$\tau_z$")
+        ax.step(rotor_angle[indices], lift_t_x[indices], label=r"$\tau_x$")
+        ax.step(rotor_angle[indices], lift_t_y[indices], label=r"$\tau_y$")
+        ax.step(rotor_angle[indices], lift_t_z[indices], label=r"$\tau_z$")
         ax.legend()
 
         plt.show()
@@ -444,8 +444,8 @@ def main():
 
     # plot_blade_pitch(sample_rotor_angle, sample_blade_pitch)
     plot_blade_pitch_flap(sample_rotor_angle, sample_blade_pitch, sample_blade_flap)
-    plot_blade_lift_f(sample_angles, sample_lift_f_z, sample_drag_f_xy)
-    # plot_blade_lift_t(sample_angles, sample_lift_t_x, sample_lift_t_y, sample_lift_t_z)
+    plot_blade_lift_f(sample_lift_angles, sample_lift_f_z, sample_drag_f_xy)
+    # plot_blade_lift_t(sample_lift_angles, sample_lift_t_x, sample_lift_t_y, sample_lift_t_z)
 
 
 if __name__ == "__main__":
