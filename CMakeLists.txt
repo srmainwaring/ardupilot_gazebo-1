@@ -76,17 +76,28 @@ pkg_check_modules(GST REQUIRED gstreamer-1.0 gstreamer-app-1.0)
 # --------------------------------------------------------------------------- #
 # Build plugin.
 
+add_library(ArduPilotUtils
+    SHARED
+    src/SocketUDP.cc
+    src/Util.cc
+)
+target_include_directories(ArduPilotUtils PRIVATE
+  include
+)
+target_link_libraries(ArduPilotUtils PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
 add_library(ArduPilotPlugin
     SHARED
     src/ArduPilotPlugin.cc
-    src/SocketUDP.cc
-    src/Util.cc
 )
 target_include_directories(ArduPilotPlugin PRIVATE
   include
 )
 target_link_libraries(ArduPilotPlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+  ArduPilotUtils
 )
 
 add_library(ParachutePlugin
@@ -137,6 +148,7 @@ target_include_directories(MotorPlugin PRIVATE
 )
 target_link_libraries(MotorPlugin PRIVATE
   gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+  ArduPilotUtils
 )
 
 # --------------------------------------------------------------------------- #
@@ -144,6 +156,7 @@ target_link_libraries(MotorPlugin PRIVATE
 
 install(
   TARGETS
+  ArduPilotUtils
   ArduPilotPlugin
   ParachutePlugin
   CameraZoomPlugin
