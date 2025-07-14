@@ -219,11 +219,16 @@ class ParameterProxy
 //////////////////////////////////////////////////
 class MotorPlugin::Impl
 { 
-  //
+  /// \brief Load control channels
+  public: void LoadControlChannels(
+    sdf::ElementPtr _sdf,
+    gz::sim::EntityComponentManager &_ecm);
+
+  /// \brief Command callback
   public: void OnPwmMsg(const google::protobuf::Message &_msg,
                         const gz::transport::MessageInfo &_info);
   
-                        //! Helper to initialise and declare a PID parameter
+  /// \brief Helper to initialise and declare a PID parameter
   public: template<typename Getter, typename Setter>
   void DeclareParameter(
       ParameterProxy<math::PID>& param,
@@ -315,116 +320,8 @@ void MotorPlugin::Impl::OnPwmMsg(const google::protobuf::Message &_msg,
   // gzdbg << "Topics: [" << _info.Topic() << "]" << "is: " << "[" << _msg.DebugString() << "] \n";
 }
 
-
-//////////////////////////////////////////////////
-//////////////////////////////////////////////////
-MotorPlugin::~MotorPlugin() = default;
-
-//////////////////////////////////////////////////
-MotorPlugin::MotorPlugin() : impl(std::make_unique<MotorPlugin::Impl>())
-{
-}
-
-//////////////////////////////////////////////////
-void MotorPlugin::Configure(
-    const Entity &_entity,
-    const std::shared_ptr<const sdf::Element> &_sdf,
-    EntityComponentManager &_ecm,
-    EventManager &)
-{
-  // Make a clone so that we can call non-const methods
-  sdf::ElementPtr sdfClone = _sdf->Clone();
-
-  // retrieve world entity
-  this->impl->world = World(
-      _ecm.EntityByComponents(components::World()));
-  if (!this->impl->world.Valid(_ecm))
-  {
-    gzerr << "MotorPlugin - world not found. "
-             "Failed to initialize.\n";
-    return;
-  }
-  this->impl->worldName = this->impl->world.Name(_ecm).value();
-  
-  // capture model entity
-  this->impl->parentModel = Model(_entity);
-  if (!this->impl->parentModel.Valid(_ecm))
-  {
-    gzerr << "MotorPlugin should be attached to a model. "
-             "Failed to initialize.\n";
-    return;
-  }
-  this->impl->parentModelName = this->impl->parentModel.Name(_ecm);
-
-  
-
-  // Load control channel params
-  this->LoadControlChannels(sdfClone, _ecm);
-
-  // create components and subscriptions.
-  for (int i = 0; i < this->impl->controls.size(); ++i)
-  {
-    auto &control = this->impl->controls[i];
-    
-    // Create joint components
-    if (!_ecm.Component<gz::sim::components::JointVelocity>(control.joint))
-    {
-      _ecm.CreateComponent(control.joint, gz::sim::components::JointVelocity({0.0}));
-    }
-    if (!_ecm.Component<gz::sim::components::JointForceCmd>(control.joint))
-    {
-      _ecm.CreateComponent(control.joint, gz::sim::components::JointForceCmd({0.0}));
-    }
-
-    // Subscriber
-    std::string topic = this->impl->topics[i];
-    this->impl->node.Subscribe(
-            topic,
-            &MotorPlugin::Impl::OnPwmMsg, this->impl.get());
-
-    gzdbg << "MotorPlugin subscribing to messages on [" << topic << "]\n";
-  }
-  this->impl->validConfig = true;
-
-
-}
-
-
-//////////////////////////////////////////////////
-void MotorPlugin::ConfigureParameters(
-    gz::transport::parameters::ParametersRegistry &_registry,
-    gz::sim::EntityComponentManager &_ecm)
-{
-  this->impl->registry = &_registry;
-
-  std::string scopedName = gz::sim::scopedName(
-    this->impl->joint.Entity(), _ecm, ".", false);
-  std::string prefix = std::string("MotorPlugin") + scopedName
-    + std::string(".");
-
-  //! @note not using gz::msgs::PID because the message does not support all
-  //!       fields available in gz::math::PID (cmd_max, cmd_min, cmd_offset)
-
-  // Declare parameter proxies
-  this->impl->DeclareParameter(this->impl->pGain,
-      &math::PID::PGain, &math::PID::SetPGain, prefix);
-  this->impl->DeclareParameter(this->impl->iGain,
-      &math::PID::IGain, &math::PID::SetIGain, prefix);
-  this->impl->DeclareParameter(this->impl->dGain,
-      &math::PID::DGain, &math::PID::SetDGain, prefix);
-  this->impl->DeclareParameter(this->impl->iMax,
-      &math::PID::IMax, &math::PID::SetIMax, prefix);
-  this->impl->DeclareParameter(this->impl->iMin,
-      &math::PID::IMin, &math::PID::SetIMin, prefix);
-  this->impl->DeclareParameter(this->impl->cmdMax,
-      &math::PID::CmdMax, &math::PID::SetCmdMax, prefix);
-  this->impl->DeclareParameter(this->impl->cmdMin,
-      &math::PID::CmdMin, &math::PID::SetCmdMin, prefix);
-  this->impl->DeclareParameter(this->impl->cmdOffset,
-      &math::PID::CmdOffset, &math::PID::SetCmdOffset, prefix);
-}
 /////////////////////////////////////////////////
-void MotorPlugin::LoadControlChannels(
+void MotorPlugin::Impl::LoadControlChannels(
     sdf::ElementPtr _sdf,
     gz::sim::EntityComponentManager &_ecm)
 {
@@ -445,8 +342,8 @@ void MotorPlugin::LoadControlChannels(
     }
     else
     {
-      // this->impl->channel = this->
-      gzwarn << "[" /*<< this->impl->modelName*/ << "] "
+      // this->channel = this->
+      gzwarn << "[" /*<< this->modelName*/ << "] "
              <<  "id/channel attribute not specified, use order parsed ["
              /* << control.channel */ << "].\n";
     }
@@ -458,16 +355,18 @@ void MotorPlugin::LoadControlChannels(
     }
     else
     {
-      gzerr << "[" << this->impl->parentModelName << "] "
+      gzerr << "[" << this->parentModelName << "] "
             << "Please specify a jointName,"
             << " where the control channel is attached.\n";
     }
 
     // Get the pointer to the joint.
-    control.joint = JointByName(_ecm, this->impl->parentModel.Entity(), control.jointName);
+    control.joint = JointByName(_ecm, this->parentModel.Entity(),
+        control.jointName);
     if (control.joint == gz::sim::kNullEntity)
     {
-      gzerr << "Joint [" << control.joint << "] not found in model [" << this->impl->parentModel.Name(_ecm) << "]" << "\n";
+      gzerr << "Joint [" << control.joint << "] not found in model ["
+            << this->parentModel.Name(_ecm) << "]" << "\n";
       return;
     }
     else
@@ -521,7 +420,7 @@ void MotorPlugin::LoadControlChannels(
 
     if (controlSdf->HasElement("cmd_topic"))
     {
-      this->impl->topics.push_back (controlSdf->Get<std::string>("cmd_topic"));
+      this->topics.push_back (controlSdf->Get<std::string>("cmd_topic"));
     }
     else
     {
@@ -530,14 +429,117 @@ void MotorPlugin::LoadControlChannels(
       return;
     }    
     
-    this->impl->controls.push_back(control);
+    this->controls.push_back(control);
     controlSdf = controlSdf->GetNextElement("control");
   }
+}
+
+//////////////////////////////////////////////////
+//////////////////////////////////////////////////
+MotorPlugin::~MotorPlugin() = default;
+
+//////////////////////////////////////////////////
+MotorPlugin::MotorPlugin() : impl(std::make_unique<MotorPlugin::Impl>())
+{
+}
+
+//////////////////////////////////////////////////
+void MotorPlugin::Configure(
+    const Entity &_entity,
+    const std::shared_ptr<const sdf::Element> &_sdf,
+    EntityComponentManager &_ecm,
+    EventManager &)
+{
+  // Make a clone so that we can call non-const methods
+  sdf::ElementPtr sdfClone = _sdf->Clone();
+
+  // retrieve world entity
+  this->impl->world = World(
+      _ecm.EntityByComponents(components::World()));
+  if (!this->impl->world.Valid(_ecm))
+  {
+    gzerr << "MotorPlugin - world not found. "
+             "Failed to initialize.\n";
+    return;
+  }
+  this->impl->worldName = this->impl->world.Name(_ecm).value();
+  
+  // capture model entity
+  this->impl->parentModel = Model(_entity);
+  if (!this->impl->parentModel.Valid(_ecm))
+  {
+    gzerr << "MotorPlugin should be attached to a model. "
+             "Failed to initialize.\n";
+    return;
+  }
+  this->impl->parentModelName = this->impl->parentModel.Name(_ecm);
+
+  
+
+  // Load control channel params
+  this->impl->LoadControlChannels(sdfClone, _ecm);
+
+  // create components and subscriptions.
+  for (int i = 0; i < this->impl->controls.size(); ++i)
+  {
+    auto &control = this->impl->controls[i];
+    
+    // Create joint components
+    if (!_ecm.Component<gz::sim::components::JointVelocity>(control.joint))
+    {
+      _ecm.CreateComponent(control.joint, gz::sim::components::JointVelocity({0.0}));
+    }
+    if (!_ecm.Component<gz::sim::components::JointForceCmd>(control.joint))
+    {
+      _ecm.CreateComponent(control.joint, gz::sim::components::JointForceCmd({0.0}));
+    }
+
+    // Subscriber
+    std::string topic = this->impl->topics[i];
+    this->impl->node.Subscribe(
+            topic,
+            &MotorPlugin::Impl::OnPwmMsg, this->impl.get());
+
+    gzdbg << "MotorPlugin subscribing to messages on [" << topic << "]\n";
+  }
+  this->impl->validConfig = true;
 
 
 }
 
+//////////////////////////////////////////////////
+void MotorPlugin::ConfigureParameters(
+    gz::transport::parameters::ParametersRegistry &_registry,
+    gz::sim::EntityComponentManager &_ecm)
+{
+  this->impl->registry = &_registry;
 
+  std::string scopedName = gz::sim::scopedName(
+    this->impl->joint.Entity(), _ecm, ".", false);
+  std::string prefix = std::string("MotorPlugin") + scopedName
+    + std::string(".");
+
+  //! @note not using gz::msgs::PID because the message does not support all
+  //!       fields available in gz::math::PID (cmd_max, cmd_min, cmd_offset)
+
+  // Declare parameter proxies
+  this->impl->DeclareParameter(this->impl->pGain,
+      &math::PID::PGain, &math::PID::SetPGain, prefix);
+  this->impl->DeclareParameter(this->impl->iGain,
+      &math::PID::IGain, &math::PID::SetIGain, prefix);
+  this->impl->DeclareParameter(this->impl->dGain,
+      &math::PID::DGain, &math::PID::SetDGain, prefix);
+  this->impl->DeclareParameter(this->impl->iMax,
+      &math::PID::IMax, &math::PID::SetIMax, prefix);
+  this->impl->DeclareParameter(this->impl->iMin,
+      &math::PID::IMin, &math::PID::SetIMin, prefix);
+  this->impl->DeclareParameter(this->impl->cmdMax,
+      &math::PID::CmdMax, &math::PID::SetCmdMax, prefix);
+  this->impl->DeclareParameter(this->impl->cmdMin,
+      &math::PID::CmdMin, &math::PID::SetCmdMin, prefix);
+  this->impl->DeclareParameter(this->impl->cmdOffset,
+      &math::PID::CmdOffset, &math::PID::SetCmdOffset, prefix);
+}
 
 //////////////////////////////////////////////////
 void MotorPlugin::PreUpdate(
@@ -670,6 +672,7 @@ void MotorPlugin::PreUpdate(
 
 }
 
+//////////////////////////////////////////////////
 void MotorPlugin::PostUpdate(
     const gz::sim::UpdateInfo &_info,
     const gz::sim::EntityComponentManager &_ecm)

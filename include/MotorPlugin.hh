@@ -62,6 +62,7 @@ class MotorPlugin :
   public: void PreUpdate(const gz::sim::UpdateInfo &_info,
                          EntityComponentManager &_ecm) final;
   
+  // Documentation inherited
   public: void PostUpdate(const gz::sim::UpdateInfo &_info,
                           const gz::sim::EntityComponentManager &_ecm) final;
 
@@ -71,14 +72,10 @@ class MotorPlugin :
                          EntityComponentManager &_ecm,
                          EventManager &) final;
   
+  // Documentation inherited
   public: void ConfigureParameters(
       gz::transport::parameters::ParametersRegistry &_registry,
       gz::sim::EntityComponentManager &_ecm) override;
-
-  /// \brief Load control channels
-  private: void LoadControlChannels(
-    sdf::ElementPtr _sdf,
-    gz::sim::EntityComponentManager &_ecm);
     
   /// \internal
   /// \brief Private implementation
