@@ -91,4 +91,4 @@ class MotorPlugin :
 }  // namespace sim
 }  // namespace gz
 
-#endif  // PARACHUTEPLUGIN_HH_
+#endif  // MOTORPLUGIN_HH_
