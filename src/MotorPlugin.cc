@@ -17,14 +17,22 @@
 
 #include "MotorPlugin.hh"
 
+#include <gz/msgs/actuators.pb.h>
+#include <gz/msgs/double.pb.h>
 #include <gz/msgs/entity_factory.pb.h>
 
+#include <chrono>
+#include <functional>
 #include <memory>
+#include <ostream>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
-#include <gz/plugin/Register.hh>
 #include <gz/common/Profiler.hh>
+#include <gz/math/PID.hh>
+#include <gz/plugin/Register.hh>
 #include <gz/sim/components/Joint.hh>
 #include <gz/sim/components/JointVelocity.hh>
 #include <gz/sim/components/JointForceCmd.hh>
@@ -36,104 +44,17 @@
 #include <gz/sim/Joint.hh>
 #include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
-#include <gz/sim/World.hh>
 #include <gz/sim/Util.hh>
-#include <gz/math/PID.hh>
-#include <gz/math/Filter.hh>
+#include <gz/sim/World.hh>
 #include <gz/transport/Node.hh>
 #include <gz/transport/parameters.hh>
 
-#include <google/protobuf/message.h>
-#include <string>
 #include "Util.hh"
-
 
 namespace gz {
 namespace sim {
 inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
-
-/// \brief class Control is responsible for controlling a joint
-class Control
-{
-  /// \brief Constructor
-  public: Control()
-  {
-    this->pid.Init(0.01, 0, 0, 0, 0, 1.0, -1.0);
-  }
-
-  public: ~Control() {}
-
-  /// \brief The PWM channel used to command this control
-  public: int channel = 0;
-
-  /// \brief Max terminal voltage
-  public: double maxVolts;
-
-  //
-  public: double velocityConstant;
-
-  //
-  public: double coilResistance;
-
-  //
-  public: double noLoadCurrent;
-
-  
-
-  /// \brief Next command to be applied to the joint
-  public: double cmd = 0;
-
-  /// \brief Velocity PID for motor control
-  public: gz::math::PID pid;
-  
-  /// \brief The controller type
-  ///
-  /// Valid controller types are:
-  ///   VELOCITY control velocity of joint
-  ///   POSITION control position of joint
-  ///   EFFORT control effort of joint
-  ///   COMMAND control sends command to topic
-  public: std::string type;
-
-  /// \brief Use force controller
-  public: bool useForce = true;
-
-  /// \brief The name of the joint being controlled
-  public: std::string jointName;
-
-  /// \brief The joint being controlled
-  public: gz::sim::Entity joint;
-
-  /// \brief A multiplier to scale the raw input command
-  public: double multiplier = 1.0;
-
-  /// \brief An offset to shift the zero-point of the raw input command
-  public: double offset = 0.0;
-
-  /// \brief Lower bound of PWM input, has default (1000).
-  ///
-  /// The lower bound of PWM input should match SERVOX_MIN for this channel.
-  public: double servo_min = 1000.0;
-
-  /// \brief Upper limit of PWM input, has default (2000).
-  ///
-  /// The upper limit of PWM input should match SERVOX_MAX for this channel.
-  public: double servo_max = 2000.0;
-
-  /// \brief Publisher for sending commands
-  public: gz::transport::Node::Publisher pub;
-
-  /// \brief unused coefficients
-  public: double rotorVelocitySlowdownSim;
-  public: double frequencyCutoff;
-  public: double samplingRate;
-  public: gz::math::OnePole<double> filter;
-
-  public: static double kDefaultRotorVelocitySlowdownSim;
-  public: static double kDefaultFrequencyCutoff;
-  public: static double kDefaultSamplingRate;
-};
 
 //////////////////////////////////////////////////
 //! \brief Utility to declare and update a parameter owned by another object
@@ -141,18 +62,18 @@ template <typename T>
 class ParameterProxy
 {
   //! \brief Constructor
-  public: ParameterProxy(const std::string_view& _name) : name(_name)
+  public: ParameterProxy(const std::string_view &_name) : name(_name)
   {
   }
 
   //! \brief Initialise
   public: template<typename Getter, typename Setter>
   void Init(
-    gz::transport::parameters::ParametersRegistry * _registry,
-    T * _obj,
-    Getter&& _getter,
-    Setter&& _setter,
-    const std::string_view& _prefix)
+    gz::transport::parameters::ParametersRegistry *_registry,
+    T *_obj,
+    Getter &&_getter,
+    Setter &&_setter,
+    const std::string_view &_prefix)
   {
     this->registry = _registry;
     this->obj = _obj;
@@ -183,7 +104,7 @@ class ParameterProxy
     {
       return;
     }
-    const double change_tolerance{1.0e-8};
+    const double changeTolerance{1.0e-8};
 
     auto value = std::make_unique<gz::msgs::Double>();
     auto result = this->registry->Parameter(scopedName, *value);
@@ -192,7 +113,7 @@ class ParameterProxy
     {
       const double a = this->getter(*obj);
       const double b = value->data();
-      const bool changed = !math::equal(a, b, change_tolerance);
+      const bool changed = !math::equal(a, b, changeTolerance);
       if (changed)
       {
         this->setter(*obj, b);
@@ -207,8 +128,8 @@ class ParameterProxy
     }
   }
 
-  private: gz::transport::parameters::ParametersRegistry * registry{nullptr};
-  private: T * obj{nullptr};
+  private: gz::transport::parameters::ParametersRegistry *registry{nullptr};
+  private: T *obj{nullptr};
   private: std::function<double(const T&)> getter;
   private: std::function<void(T&, double)> setter;
   private: std::string_view prefix;
@@ -219,79 +140,74 @@ class ParameterProxy
 //////////////////////////////////////////////////
 class MotorPlugin::Impl
 { 
-  /// \brief Load control channels
-  public: void LoadControlChannels(
-    sdf::ElementPtr _sdf,
-    gz::sim::EntityComponentManager &_ecm);
+  /// \brief Callback for velocity subscription
+  /// \param[in] _msg Velocity message
+  public: void OnCmdVel(const msgs::Double &_msg);
 
-  /// \brief Command callback
-  public: void OnPwmMsg(const google::protobuf::Message &_msg,
-                        const gz::transport::MessageInfo &_info);
-  
+  /// \brief Callback for actuator velocity subscription
+  /// \param[in] _msg Actuators.velocity message
+  public: void OnActuatorVel(const msgs::Actuators &_msg);
+
   /// \brief Helper to initialise and declare a PID parameter
   public: template<typename Getter, typename Setter>
   void DeclareParameter(
-      ParameterProxy<math::PID>& param,
-      Getter&& getter,
-      Setter&& setter,
-      const std::string& prefix)
+      ParameterProxy<math::PID> &_param,
+      Getter &&_getter,
+      Setter &&_setter,
+      const std::string &_prefix)
   {
-    param.Init(registry, &posPid,
-      std::forward<Getter>(getter),
-      std::forward<Setter>(setter),
-      prefix);
-    param.Declare();
+    _param.Init(registry, &velPid,
+      std::forward<Getter>(_getter),
+      std::forward<Setter>(_setter),
+      _prefix);
+    _param.Declare();
   }
-  /// \brief World occupied by the parent model.
-  public: World world{kNullEntity};
-  
-  /// \brief Name of the world entity.
-  public: std::string worldName;
 
-  /// \brief Model entity of Motor Model.
-  public: Model parentModel{kNullEntity};
+  /// \brief Gazebo communication node.
+  public: transport::Node node;
 
-  /// \brief Name of the model entity.
-  public: std::string parentModelName;
-
-  /// \brief Array of controllers
-  public: std::vector<Control> controls;
-
-  /// \brief Array of pwm command topics
-  public: std::vector<std::string> topics;
-  
-  /// \brief keep track of controller update sim-time.
-  public: std::chrono::steady_clock::duration lastMotorModelUpdateTime{0};
-
-  ///
-  public: std::string joint_name_;
-  
-  ///
-  public: gz::sim::Entity joint_entity_ = gz::sim::kNullEntity;
-
-  /// \brief Array of subscribers for PWM topics
-  public: std::vector<gz::transport::Node::Subscriber> subscribers;
-  
-  /// \brief Store PWM values indexed by channel
-  public: std::map<std::string, std::string> pwmValues;
-  
-  /// \brief Mutex to protect PWM values
-  public: std::mutex pwmMutex;
-
-  //
-  public: bool validConfig{false};
-
-  //
-  gz::transport::Node node;
+  /// \brief Model interface
+  public: Model model{kNullEntity};
 
   /// \brief Joint Entity
-  public: Joint joint{kNullEntity};
+  public: std::vector<Entity> jointEntities;
 
-   /// \brief Position PID controller.
-  public: math::PID posPid;
+  /// \brief Joint name
+  public: std::vector<std::string> jointNames;
+
+  /// \brief Commanded joint velocity
+  public: double jointVelCmd{0.0};
+
+  /// \brief Index of velocity actuator.
+  public: int actuatorNumber = 0;
+
+  /// \brief mutex to protect jointVelCmd
+  public: std::mutex jointVelCmdMutex;
+
+  /// \brief True if using Actuator msg to control joint velocity.
+  public: bool useActuatorMsg{false};
+
+  /// \brief True if braking is disabled.
+  public: bool disableBraking{false};
+
+  /// \brief The maximum terminal voltage (V).
+  public: double voltageMax;
+
+  /// \brief The motor speed constant K_V.
+  public: double speedConstant;
+
+  /// \brief R the motor internal resistance (Ohms).
+  public: double coilResistance;
+
+  /// \brief i_0 the current draw when the motor is run at its
+  /// specificed voltage and operational RPM with no load (A).
+  public: double noLoadCurrent;
+
+  /// \brief Velocity PID controller.
+  public: math::PID velPid;
 
   /// \brief Parameters registry
-  public: transport::parameters::ParametersRegistry * registry;
+  public: transport::parameters::ParametersRegistry *registry;
 
   /// Dynamic parameters
   public: ParameterProxy<math::PID> pGain{"p_gain"};
@@ -302,136 +218,28 @@ class MotorPlugin::Impl
   public: ParameterProxy<math::PID> cmdMax{"cmd_max"};
   public: ParameterProxy<math::PID> cmdMin{"cmd_min"};
   public: ParameterProxy<math::PID> cmdOffset{"cmd_offset"};
-
 };
 
 //////////////////////////////////////////////////
-void MotorPlugin::Impl::OnPwmMsg(const google::protobuf::Message &_msg,
-                                 const gz::transport::MessageInfo &_info)
+void MotorPlugin::Impl::OnCmdVel(const msgs::Double &_msg)
 {
-  // gzmsg << "Topic: [" <<_info.Topic() << "]" << "Message:- [" << _msg.DebugString() <<"]\n";
-  std::lock_guard<std::mutex> lock(this->pwmMutex);
-  const gz::msgs::Double* doubleMsg = dynamic_cast<const gz::msgs::Double*>(&_msg);
-  if (doubleMsg) {
-    this->pwmValues[_info.Topic()] = std::to_string(doubleMsg->data());
-    // return;
-  }
-  // this->pwmValues[_info.Topic()] = _msg.DebugString();
-  // gzdbg << "Topics: [" << _info.Topic() << "]" << "is: " << "[" << _msg.DebugString() << "] \n";
+  std::lock_guard<std::mutex> lock(this->jointVelCmdMutex);
+  this->jointVelCmd = _msg.data();
 }
 
 /////////////////////////////////////////////////
-void MotorPlugin::Impl::LoadControlChannels(
-    sdf::ElementPtr _sdf,
-    gz::sim::EntityComponentManager &_ecm)
+void MotorPlugin::Impl::OnActuatorVel(const msgs::Actuators &_msg)
 {
-  // per control channel 
-  sdf::ElementPtr controlSdf;
-  if (_sdf->HasElement("control"))
+  std::lock_guard<std::mutex> lock(this->jointVelCmdMutex);
+  if (this->actuatorNumber > _msg.velocity_size() - 1)
   {
-    controlSdf = _sdf->GetElement("control");
+    gzerr << "You tried to access index " << this->actuatorNumber
+      << " of the Actuator velocity array which is of size "
+      << _msg.velocity_size() << std::endl;
+    return;
   }
-  while (controlSdf)
-  {
-    Control control;
 
-    if (controlSdf->HasAttribute("channel"))
-    {
-      control.channel =
-        atoi(controlSdf->GetAttribute("channel")->GetAsString().c_str());
-    }
-    else
-    {
-      // this->channel = this->
-      gzwarn << "[" /*<< this->modelName*/ << "] "
-             <<  "id/channel attribute not specified, use order parsed ["
-             /* << control.channel */ << "].\n";
-    }
-
-    // parameters
-    if (controlSdf->HasElement("jointName"))
-    {
-      control.jointName = controlSdf->Get<std::string>("jointName");
-    }
-    else
-    {
-      gzerr << "[" << this->parentModelName << "] "
-            << "Please specify a jointName,"
-            << " where the control channel is attached.\n";
-    }
-
-    // Get the pointer to the joint.
-    control.joint = JointByName(_ecm, this->parentModel.Entity(),
-        control.jointName);
-    if (control.joint == gz::sim::kNullEntity)
-    {
-      gzerr << "Joint [" << control.joint << "] not found in model ["
-            << this->parentModel.Name(_ecm) << "]" << "\n";
-      return;
-    }
-    else
-    {
-      gzmsg << "Got Joint [" << control.joint << "]\n";  
-    }
-
-    if (controlSdf->HasElement("maxVolts"))
-    {
-      control.maxVolts = controlSdf->Get<double>("maxVolts");
-    }
-    else
-    {
-      gzerr << "MotorPlugin requires parameter 'maxVolts'. "
-               "Failed to initialize.\n";
-               return;
-    }
-  
-    if (controlSdf->HasElement("velocityConstant"))
-    {
-      control.velocityConstant = controlSdf->Get<double>("velocityConstant");
-    }
-    else
-    {
-      gzerr << "MotorPlugin requires parameter 'velocityConstant'. "
-               "Failed to initialize.\n";
-      return;
-    }
-  
-    if (controlSdf->HasElement("coilResistance"))
-    {
-      control.coilResistance = controlSdf->Get<double>("coilResistance");
-    }
-    else
-    {
-      gzerr << "MotorPlugin requires parameter 'coilResistance'. "
-               "Failed to initialize.\n";
-      return;
-    }
-  
-    if (controlSdf->HasElement("noLoadCurrent"))
-    {
-      control.noLoadCurrent = controlSdf->Get<double>("noLoadCurrent");
-    }
-    else
-    {
-      gzerr << "MotorPlugin requires parameter 'noLoadCurrent'. "
-               "Failed to initialize.\n";
-      return;
-    }
-
-    if (controlSdf->HasElement("cmd_topic"))
-    {
-      this->topics.push_back (controlSdf->Get<std::string>("cmd_topic"));
-    }
-    else
-    {
-      gzerr << "MotorPlugin requires parameter 'cmd_topic'. "
-               "Failed to initialize.\n";
-      return;
-    }    
-    
-    this->controls.push_back(control);
-    controlSdf = controlSdf->GetNextElement("control");
-  }
+  this->jointVelCmd = static_cast<double>(_msg.velocity(this->actuatorNumber));
 }
 
 //////////////////////////////////////////////////
@@ -448,63 +256,211 @@ void MotorPlugin::Configure(
     const Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
     EntityComponentManager &_ecm,
-    EventManager &)
+    EventManager &/*_eventMgr*/)
 {
-  // Make a clone so that we can call non-const methods
-  sdf::ElementPtr sdfClone = _sdf->Clone();
+  this->impl->model = Model(_entity);
 
-  // retrieve world entity
-  this->impl->world = World(
-      _ecm.EntityByComponents(components::World()));
-  if (!this->impl->world.Valid(_ecm))
+  if (!this->impl->model.Valid(_ecm))
   {
-    gzerr << "MotorPlugin - world not found. "
-             "Failed to initialize.\n";
+    gzerr << "MotorPlugin: should be attached to a model entity. "
+           << "Failed to initialize." << std::endl;
     return;
   }
-  this->impl->worldName = this->impl->world.Name(_ecm).value();
-  
-  // capture model entity
-  this->impl->parentModel = Model(_entity);
-  if (!this->impl->parentModel.Valid(_ecm))
+
+  // Get params from SDF
+  auto sdfElem = _sdf->FindElement("joint_name");
+  while (sdfElem)
   {
-    gzerr << "MotorPlugin should be attached to a model. "
-             "Failed to initialize.\n";
+    if (!sdfElem->Get<std::string>().empty())
+    {
+      this->impl->jointNames.push_back(sdfElem->Get<std::string>());
+    }
+    else
+    {
+      gzerr << "<joint_name> provided but is empty." << std::endl;
+    }
+    sdfElem = sdfElem->GetNextElement("joint_name");
+  }
+  if (this->impl->jointNames.empty())
+  {
+    gzerr << "Failed to get any <joint_name>." << std::endl;
     return;
   }
-  this->impl->parentModelName = this->impl->parentModel.Name(_ecm);
 
-  
-
-  // Load control channel params
-  this->impl->LoadControlChannels(sdfClone, _ecm);
-
-  // create components and subscriptions.
-  for (int i = 0; i < this->impl->controls.size(); ++i)
   {
-    auto &control = this->impl->controls[i];
-    
-    // Create joint components
-    if (!_ecm.Component<gz::sim::components::JointVelocity>(control.joint))
+    // PID parameters
+    double p         = _sdf->Get<double>("p_gain",     1.0).first;
+    double i         = _sdf->Get<double>("i_gain",     0.0).first;
+    double d         = _sdf->Get<double>("d_gain",     0.0).first;
+    double iMax      = _sdf->Get<double>("i_max",      1.0).first;
+    double iMin      = _sdf->Get<double>("i_min",     -1.0).first;
+    double cmdMax    = _sdf->Get<double>("cmd_max",    1000.0).first;
+    double cmdMin    = _sdf->Get<double>("cmd_min",   -1000.0).first;
+    double cmdOffset = _sdf->Get<double>("cmd_offset", 0.0).first;
+
+    this->impl->velPid.Init(p, i, d, iMax, iMin, cmdMax, cmdMin, cmdOffset);
+
+    if (_sdf->HasElement("disable_braking"))
     {
-      _ecm.CreateComponent(control.joint, gz::sim::components::JointVelocity({0.0}));
-    }
-    if (!_ecm.Component<gz::sim::components::JointForceCmd>(control.joint))
-    {
-      _ecm.CreateComponent(control.joint, gz::sim::components::JointForceCmd({0.0}));
+      this->impl->disableBraking = _sdf->Get<bool>("disable_braking");
     }
 
-    // Subscriber
-    std::string topic = this->impl->topics[i];
-    this->impl->node.Subscribe(
-            topic,
-            &MotorPlugin::Impl::OnPwmMsg, this->impl.get());
-
-    gzdbg << "MotorPlugin subscribing to messages on [" << topic << "]\n";
+    gzdbg << "MotorPlugin: system parameters:" << std::endl;
+    gzdbg << "p_gain: ["     << p         << "]" << std::endl;
+    gzdbg << "i_gain: ["     << i         << "]" << std::endl;
+    gzdbg << "d_gain: ["     << d         << "]" << std::endl;
+    gzdbg << "i_max: ["      << iMax      << "]" << std::endl;
+    gzdbg << "i_min: ["      << iMin      << "]" << std::endl;
+    gzdbg << "cmd_max: ["    << cmdMax    << "]" << std::endl;
+    gzdbg << "cmd_min: ["    << cmdMin    << "]" << std::endl;
+    gzdbg << "cmd_offset: [" << cmdOffset << "]" << std::endl;
+    gzdbg << "disable_braking: [" << this->impl->disableBraking
+          << "]" << std::endl;
   }
-  this->impl->validConfig = true;
 
+  if (_sdf->HasElement("use_actuator_msg") &&
+    _sdf->Get<bool>("use_actuator_msg"))
+  {
+    if (_sdf->HasElement("actuator_number"))
+    {
+      this->impl->actuatorNumber =
+        _sdf->Get<int>("actuator_number");
+      this->impl->useActuatorMsg = true;
+    }
+    else
+    {
+      gzerr << "Please specify an actuator_number" <<
+        "to use Actuator velocity message control." << std::endl;
+    }
+  }
 
+  // Subscribe to commands
+  std::string topic;
+  if ((!_sdf->HasElement("sub_topic")) && (!_sdf->HasElement("topic"))
+    && (!this->impl->useActuatorMsg))
+  {
+    topic = transport::TopicUtils::AsValidTopic("/model/" +
+        this->impl->model.Name(_ecm) + "/joint/" +
+        this->impl->jointNames[0] + "/cmd_vel");
+    if (topic.empty())
+    {
+      gzerr << "Failed to create topic for joint ["
+            << this->impl->jointNames[0]
+            << "]" << std::endl;
+      return;
+    }
+  }
+  if ((!_sdf->HasElement("sub_topic")) && (!_sdf->HasElement("topic"))
+    && (this->impl->useActuatorMsg))
+  {
+    topic = transport::TopicUtils::AsValidTopic("/actuators");
+    if (topic.empty())
+    {
+      gzerr << "Failed to create Actuator topic for joint ["
+            << this->impl->jointNames[0]
+            << "]" << std::endl;
+      return;
+    }
+  }
+  if (_sdf->HasElement("sub_topic"))
+  {
+    topic = transport::TopicUtils::AsValidTopic("/model/" +
+      this->impl->model.Name(_ecm) + "/" +
+        _sdf->Get<std::string>("sub_topic"));
+
+    if (topic.empty())
+    {
+      gzerr << "Failed to create topic from sub_topic [/model/"
+             << this->impl->model.Name(_ecm) << "/"
+             << _sdf->Get<std::string>("sub_topic")
+             << "]" << " for joint [" << this->impl->jointNames[0]
+             << "]" << std::endl;
+      return;
+    }
+  }
+  if (_sdf->HasElement("topic"))
+  {
+    topic = transport::TopicUtils::AsValidTopic(
+        _sdf->Get<std::string>("topic"));
+
+    if (topic.empty())
+    {
+      gzerr << "Failed to create topic [" << _sdf->Get<std::string>("topic")
+             << "]" << " for joint [" << this->impl->jointNames[0]
+             << "]" << std::endl;
+      return;
+    }
+  }
+
+  if (this->impl->useActuatorMsg)
+  {
+    this->impl->node.Subscribe(topic,
+      &MotorPlugin::Impl::OnActuatorVel,
+      this->impl.get());
+
+    gzmsg << "MotorPlugin: subscribing to Actuator messages on [" << topic
+         << "]" << std::endl;
+  }
+  else
+  {
+    this->impl->node.Subscribe(topic,
+      &MotorPlugin::Impl::OnCmdVel,
+      this->impl.get());
+
+    gzmsg << "MotorPlugin: subscribing to Double messages on [" << topic
+         << "]" << std::endl;
+  }
+
+  // Electro-mechanical parameters
+  if (_sdf->HasElement("voltage_max"))
+  {
+    this->impl->voltageMax = _sdf->Get<double>("voltage_max");
+  }
+  else
+  {
+    gzerr << "MotorPlugin: must set `<voltage_max>`." << std::endl;  
+    return;
+  }
+
+  if (_sdf->HasElement("speed_constant"))
+  {
+    this->impl->speedConstant = _sdf->Get<double>("speed_constant");
+  }
+  else
+  {
+    gzerr << "MotorPlugin: must set `<speed_constant>`." << std::endl;  
+    return;
+  }
+
+  if (_sdf->HasElement("coil_resistance"))
+  {
+    this->impl->coilResistance = _sdf->Get<double>("coil_resistance");
+  }
+  else
+  {
+    gzerr << "MotorPlugin: must set `<coil_resistance>`." << std::endl;  
+    return;
+  }
+
+  if (_sdf->HasElement("no_load_current"))
+  {
+    this->impl->noLoadCurrent = _sdf->Get<double>("no_load_current");
+  }
+  else
+  {
+    gzerr << "MotorPlugin: must set `<no_load_current>`." << std::endl;  
+    return;
+  }
+
+  {
+    gzdbg << "MotorPlugin: system parameters:" << std::endl;
+    gzdbg << "voltage_max: [" << this->impl->voltageMax << "]" << std::endl;
+    gzdbg << "speed_constant: [" << this->impl->speedConstant << "]" << std::endl;
+    gzdbg << "coil_resistance: [" << this->impl->coilResistance << "]" << std::endl;
+    gzdbg << "no_load_current: [" << this->impl->noLoadCurrent << "]" << std::endl;
+  }
+
+  // this->impl->validConfig = true;
 }
 
 //////////////////////////////////////////////////
@@ -514,13 +470,61 @@ void MotorPlugin::ConfigureParameters(
 {
   this->impl->registry = &_registry;
 
+  // If the joints haven't been identified yet, look for them
+  if (this->impl->jointEntities.empty())
+  {
+    bool warned{false};
+    for (const std::string &name : this->impl->jointNames)
+    {
+      // First try to resolve by scoped name.
+      Entity joint = kNullEntity;
+      auto entities = entitiesFromScopedName(
+          name, _ecm, this->impl->model.Entity());
+
+      if (!entities.empty())
+      {
+        if (entities.size() > 1)
+        {
+          gzwarn << "Multiple joint entities with name ["
+                << name << "] found. "
+                << "Using the first one." << std::endl;
+        }
+        joint = *entities.begin();
+
+        // Validate
+        if (!_ecm.EntityHasComponentType(joint, components::Joint::typeId))
+        {
+          gzerr << "Entity with name[" << name
+                << "] is not a joint" << std::endl;
+          joint = kNullEntity;
+        }
+        else
+        {
+          gzdbg << "Identified joint [" << name
+                << "] as Entity [" << joint << "]" << std::endl;
+        }
+      }
+
+      if (joint != kNullEntity)
+      {
+        this->impl->jointEntities.push_back(joint);
+      }
+      else if (!warned)
+      {
+        gzwarn << "Failed to find joint [" << name << "]" << std::endl;
+        warned = true;
+      }
+    }
+  }
+
+  if (this->impl->jointEntities.empty())
+    return;
+  
+  // Use the first joint to create the scoped parameter names
   std::string scopedName = gz::sim::scopedName(
-    this->impl->joint.Entity(), _ecm, ".", false);
+    this->impl->jointEntities[0], _ecm, ".", false);
   std::string prefix = std::string("MotorPlugin") + scopedName
     + std::string(".");
-
-  //! @note not using gz::msgs::PID because the message does not support all
-  //!       fields available in gz::math::PID (cmd_max, cmd_min, cmd_offset)
 
   // Declare parameter proxies
   this->impl->DeclareParameter(this->impl->pGain,
@@ -548,118 +552,23 @@ void MotorPlugin::PreUpdate(
 {
   GZ_PROFILE("MotorPlugin::PreUpdate");
 
-	if (!_info.paused && _info.simTime >
-            this->impl->lastMotorModelUpdateTime)
-	{
-		for (size_t i = 0; i < this->impl->controls.size(); ++i)
-		{
-			auto &control = this->impl->controls[i];
-			double pwm = 0.0;
-			
-			auto joint_vel_comp = _ecm.Component<gz::sim::components::JointVelocity>(control.joint);
-			if (!joint_vel_comp)
-			{
-				gzerr << "JointVelocity component missing for joint [" << control.jointName << "]\n";
-				return;
-			}
+  //! @todo(anyone) Support rewind
+  if (_info.dt < std::chrono::steady_clock::duration::zero())
+  {
+    gzwarn << "Detected jump back in time ["
+           << std::chrono::duration<double>(_info.dt).count()
+           << "s]. System may not work properly." << std::endl;
+  }
 
-			const auto &velocities = joint_vel_comp->Data();
-			if (velocities.empty())
-			{
-				gzerr << "Empty velocities for joint [" << control.jointName << "]\n";
-				continue;
-			}
+  if (this->impl->jointEntities.empty())
+    return;
 
-			// current joint speed (rad/s)
-			double currOmega = velocities[0];
-			
-			std::string topic = "/" + this->impl->topics[i];
-			{
-				std::lock_guard<std::mutex> lock(this->impl->pwmMutex);
-				auto it = this->impl->pwmValues.find(topic);
-				if (it != this->impl->pwmValues.end())
-				{
-					try
-					{
-						pwm = std::stod(it->second);
-						// gzdbg << "Pwm received for channel [" << control.channel << "] is: [" << pwm << "]\n";
-					}
-					catch (const std::exception &e)
-					{
-						gzwarn << "Failed to convert PWM value for topic [" << topic << "]: " << e.what() << "\n";
-						pwm = 0.0;
-					}
-				}
-			}
+    // Nothing left to do if paused.
+  if (_info.paused)
+    return;
 
-			double targetOmega = pwm;
-
-
-			if (std::abs(pwm) < 1.0) 
-			{
-				// gzdbg << "Zero rad/s PWM from topic, setting torque to 0\n";
-				auto jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(control.joint);
-				if (jfcComp)
-				{
-					auto &forceCmd = jfcComp->Data();
-					if (!forceCmd.empty())
-					{
-						forceCmd[0] = 0.0;
-					}
-				}
-				continue;
-			}
-
-			double dt =std::chrono::duration_cast<std::chrono::duration<double> >(
-									_info.simTime - this->impl->
-					lastMotorModelUpdateTime).count();
-      gzdbg << "Dt:- " << dt << "\n";
-			double velError = targetOmega - currOmega;
-			double desOmega = this->impl->controls[i].pid.Update(
-					velError, std::chrono::duration<double>(dt)); 
-			
-
-			// Apply Drela's motor model equations
-			
-			// Equation (4): Current as function of speed and terminal voltage
-			// i(Ω, v) = (v - Ω/KV) / R
-			// Note: velocityConstant should be KV in rad/s/Volt
-
-			double reqV = (desOmega / control.velocityConstant) +   
-														(control.noLoadCurrent * control.coilResistance);
-			
-			// Clamp voltage to available range
-			double terminalV = std::max(-control.maxVolts, std::min(control.maxVolts, reqV));
-			
-			double backEmfV = currOmega / control.velocityConstant;  // Ω/KV
-			double current = (terminalV - backEmfV) / control.coilResistance;
-
-			// Equation (5): Qm = (i - io) / KQ
-			double torque = (current - control.noLoadCurrent) * control.velocityConstant;
-			
-			// Debug output
-			gzdbg << "Joint [" << control.jointName << "]:\n"
-						<< "  PWM: " << pwm << "\n"
-						<< "  Terminal Voltage: " << terminalV << " V\n"
-						<< "  Current Speed: " << currOmega << " rad/s (" << (currOmega * 60.0) / (2.0 * M_PI) << " RPM)\n"
-						<< "  Back-EMF: " << backEmfV << " V\n"
-						<< "  Current: " << current << " A\n"
-						<< "  Torque: " << torque << " Nm\n";
-
-			// Apply torque to joint
-			auto jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(control.joint);
-			if (jfcComp)
-			{
-				auto &forceCmd = jfcComp->Data();
-				forceCmd[0] = torque;
-			}
-			else
-			{
-				gzerr << "JointForceCmd component missing for joint [" << control.jointName << "]\n";
-			}
-		}
-
-    // Update parameters
+  // Update parameters
+  {
     this->impl->pGain.Update();
     this->impl->iGain.Update();
     this->impl->dGain.Update();
@@ -668,24 +577,202 @@ void MotorPlugin::PreUpdate(
     this->impl->cmdMax.Update();
     this->impl->cmdMin.Update();
     this->impl->cmdOffset.Update();
-	}
+  }
 
-}
+  // Create joint velocity component if one doesn't exist
+  auto jointVelComp = _ecm.Component<components::JointVelocity>(
+      this->impl->jointEntities[0]);
+  if (!jointVelComp)
+  {
+    _ecm.CreateComponent(this->impl->jointEntities[0],
+        components::JointVelocity());
+  }
 
-//////////////////////////////////////////////////
-void MotorPlugin::PostUpdate(
-    const gz::sim::UpdateInfo &_info,
-    const gz::sim::EntityComponentManager &_ecm)
-{
-    std::lock_guard<std::mutex> lock(this->impl->pwmMutex);
+  // We just created the joint velocity component, give one iteration for the
+  // physics system to update its size
+  if (jointVelComp == nullptr || jointVelComp->Data().empty())
+    return;
 
-    // Publish the new state.
-    if (!_info.paused && _info.simTime > this->impl->lastMotorModelUpdateTime)
+  double targetVel;
+  {
+    std::lock_guard<std::mutex> lock(this->impl->jointVelCmdMutex);
+    targetVel = this->impl->jointVelCmd;
+  }
+  double actualVel = jointVelComp->Data().at(0);
+  double error = actualVel - targetVel;
+
+  // If braking is disabled only apply force if the actual velocity is below
+  // the target - i.e. allow joint to freewheel.
+  bool applyForce = true;
+  if (this->impl->disableBraking)
+  {
+      double sgn = math::signum(targetVel);
+      applyForce = !math::equal(sgn, 0.0, 1e-16) && sgn * error <= 0.0;
+  }
+
+  // Apply forces.
+  if ((!jointVelComp->Data().empty()) &&
+      (applyForce))
+  {
+    for (Entity joint : this->impl->jointEntities)
     {
-        double t = std::chrono::duration_cast<std::chrono::duration<double>>(
-                _info.simTime).count();
-        this->impl->lastMotorModelUpdateTime = _info.simTime;
+      // Update force command.
+      double force = this->impl->velPid.Update(error, _info.dt);
+
+      auto forceComp =
+          _ecm.Component<components::JointForceCmd>(joint);
+      if (forceComp == nullptr)
+      {
+        _ecm.CreateComponent(joint,
+                            components::JointForceCmd({force}));
+      }
+      else
+      {
+        *forceComp = components::JointForceCmd({force});
+      }
+
+      // Electro-mechanical calculations (per-joint)
+      // First-Order DC Electric Motor Model
+      // Mark Drela, MIT Aero & Astro
+      // February 2007
+      double Omega = actualVel;
+      double K_V = this->impl->speedConstant;
+      double i_0 = this->impl->noLoadCurrent;
+      double R = this->impl->coilResistance;
+      double v_bat = this->impl->voltageMax;
+      double K_Q = K_V;
+      double v_m = Omega / K_V;
+      double Q_m = force;
+      double i = Q_m * K_Q + i_0;
+      double v = v_m + i * R;
+      
+      {
+        gzdbg << "--------------------------------" << std::endl;
+        gzdbg << "MotorPlugin: electic motor calcs" << std::endl;
+        gzdbg << "Omega: " << Omega << std::endl;
+        gzdbg << "K_V:   " << K_V << std::endl;
+        gzdbg << "K_Q:   " << K_Q << std::endl;
+        gzdbg << "i_0:   " << i_0 << std::endl;
+        gzdbg << "R:     " << R << std::endl;
+        gzdbg << "v_bat: " << v_bat << std::endl;
+        gzdbg << "v_m:   " << v_m << std::endl;
+        gzdbg << "Q_m:   " << Q_m << std::endl;
+        gzdbg << "i:     " << i << std::endl;
+        gzdbg << "v:     " << v << std::endl;
+        gzdbg << "--------------------------------" << std::endl;
+      }
     }
+  }
+
+#if 0
+    for (size_t i = 0; i < this->impl->controls.size(); ++i)
+    {
+      auto &control = this->impl->controls[i];
+      double pwm = 0.0;
+      
+      auto joint_vel_comp = _ecm.Component<gz::sim::components::JointVelocity>(control.joint);
+      if (!joint_vel_comp)
+      {
+        gzerr << "JointVelocity component missing for joint [" << control.jointName << "]\n";
+        return;
+      }
+
+      const auto &velocities = joint_vel_comp->Data();
+      if (velocities.empty())
+      {
+        gzerr << "Empty velocities for joint [" << control.jointName << "]\n";
+        continue;
+      }
+
+      // current joint speed (rad/s)
+      double currOmega = velocities[0];
+      
+      std::string topic = "/" + this->impl->topics[i];
+      {
+        std::lock_guard<std::mutex> lock(this->impl->pwmMutex);
+        auto it = this->impl->pwmValues.find(topic);
+        if (it != this->impl->pwmValues.end())
+        {
+          try
+          {
+            pwm = std::stod(it->second);
+            // gzdbg << "Pwm received for channel [" << control.channel << "] is: [" << pwm << "]\n";
+          }
+          catch (const std::exception &e)
+          {
+            gzwarn << "Failed to convert PWM value for topic [" << topic << "]: " << e.what() << "\n";
+            pwm = 0.0;
+          }
+        }
+      }
+
+      double targetOmega = pwm;
+
+
+      if (std::abs(pwm) < 1.0) 
+      {
+        // gzdbg << "Zero rad/s PWM from topic, setting torque to 0\n";
+        auto jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(control.joint);
+        if (jfcComp)
+        {
+          auto &forceCmd = jfcComp->Data();
+          if (!forceCmd.empty())
+          {
+            forceCmd[0] = 0.0;
+          }
+        }
+        continue;
+      }
+
+      double dt =std::chrono::duration_cast<std::chrono::duration<double> >(
+                  _info.simTime - this->impl->
+          lastMotorModelUpdateTime).count();
+      gzdbg << "Dt:- " << dt << "\n";
+      double velError = targetOmega - currOmega;
+      double desOmega = this->impl->controls[i].pid.Update(
+          velError, std::chrono::duration<double>(dt)); 
+      
+
+      // Apply Drela's motor model equations
+      
+      // Equation (4): Current as function of speed and terminal voltage
+      // i(Ω, v) = (v - Ω/KV) / R
+      // Note: velocityConstant should be KV in rad/s/Volt
+
+      double reqV = (desOmega / control.velocityConstant) +   
+                            (control.noLoadCurrent * control.coilResistance);
+      
+      // Clamp voltage to available range
+      double terminalV = std::max(-control.maxVolts, std::min(control.maxVolts, reqV));
+      
+      double backEmfV = currOmega / control.velocityConstant;  // Ω/KV
+      double current = (terminalV - backEmfV) / control.coilResistance;
+
+      // Equation (5): Qm = (i - io) / KQ
+      double torque = (current - control.noLoadCurrent) * control.velocityConstant;
+      
+      // Debug output
+      gzdbg << "Joint [" << control.jointName << "]:\n"
+            << "  PWM: " << pwm << "\n"
+            << "  Terminal Voltage: " << terminalV << " V\n"
+            << "  Current Speed: " << currOmega << " rad/s (" << (currOmega * 60.0) / (2.0 * M_PI) << " RPM)\n"
+            << "  Back-EMF: " << backEmfV << " V\n"
+            << "  Current: " << current << " A\n"
+            << "  Torque: " << torque << " Nm\n";
+
+      // Apply torque to joint
+      auto jfcComp = _ecm.Component<gz::sim::components::JointForceCmd>(control.joint);
+      if (jfcComp)
+      {
+        auto &forceCmd = jfcComp->Data();
+        forceCmd[0] = torque;
+      }
+      else
+      {
+        gzerr << "JointForceCmd component missing for joint [" << control.jointName << "]\n";
+      }
+    }
+#endif
 }
 
 //////////////////////////////////////////////////
@@ -698,9 +785,9 @@ void MotorPlugin::PostUpdate(
 GZ_ADD_PLUGIN(
     gz::sim::systems::MotorPlugin,
     gz::sim::System,
-    gz::sim::systems::MotorPlugin::ISystemConfigureParameters,
+    gz::sim::systems::MotorPlugin::ISystemPreUpdate,
     gz::sim::systems::MotorPlugin::ISystemConfigure,
-    gz::sim::systems::MotorPlugin::ISystemPreUpdate)
+    gz::sim::systems::MotorPlugin::ISystemConfigureParameters)
 
 GZ_ADD_PLUGIN_ALIAS(
     gz::sim::systems::MotorPlugin,

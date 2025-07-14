@@ -26,31 +26,65 @@ namespace sim {
 inline namespace GZ_SIM_VERSION_NAMESPACE {
 namespace systems {
 
-/// \brief Parachute releaase plugin which may be attached to a model.
+/// \brief Motor plugin which can be attached to a model and is used to
+/// control the velocity of a joint.
 ///
 /// ## System Parameters:
 ///
-///   `<parent_link>` The link in the target model to attach the parachute.
-///   Required.
+/// - `<joint_name>` The name of the joint to be controlled.
 ///
-///   `<child_model>` The name of the parachute model.
-///   Required.
+/// - `<topic>` Topic to receive commands in. Defaults to
+///     `/model/<model_name>/joint/<joint_name>/cmd_vel`.
 ///
-///   `<child_link>` The base link of the parachute model (bridle point).
-///   Required.
+/// ### Electro-mechanical properties
 ///
-///   `<child_pose>` The relative pose of parent link to the child link.
-///   The default value is: `0, 0, 0, 0, 0, 0`.
+/// - `<voltage_max>` The maximum terminal voltage.
 ///
-///   `<cmd_topic>` The topic to receive  the parachute release command.
-///   The default value is: `/model/<model_name>/parachute/cmd_release`.
+/// - `<speed_constant>` K_V the motor speed constant, relates the back-emf to
+/// the motor angular velocity omega by the relation V_m = omega / K_V.
+///
+/// - `<coil_resistance>` R the motor internal resistance (Ohms)
+///
+/// - `<no_load_current>` i_0 the current draw when the motor is run at its
+/// specificed voltage and operational RPM with no load.
+///
+/// ### Force control
+///
+/// The controller accepts the next optional parameters:
+///
+/// - `<p_gain>` The proportional gain of the PID.
+/// The default value is 1.
+///
+/// - `<i_gain>` The integral gain of the PID.
+/// The default value is 0.
+///
+/// - `<d_gain>` The derivative gain of the PID.
+/// The default value is 0.
+///
+/// - `<i_max>` The integral upper limit of the PID.
+/// The default value is 1.
+///
+/// - `<i_min>` The integral lower limit of the PID.
+/// The default value is -1.
+///
+/// - `<cmd_max>` Output max value of the PID.
+/// The default value is 1000.
+///
+/// - `<cmd_min>` Output min value of the PID.
+/// The default value is -1000.
+///
+/// - `<cmd_offset>` Command offset (feed-forward) of the PID.
+/// The default value is 0.
+///
+/// - `<disable_braking>` Disable braking. Allows the joint to freewheel
+/// if the commanded velocity is below the actual velocity.
+/// The default value is 0.
 ///
 class MotorPlugin :
     public System,
-    public ISystemConfigureParameters,
     public ISystemPreUpdate,
-    public ISystemPostUpdate,
-    public ISystemConfigure
+    public ISystemConfigure,
+    public ISystemConfigureParameters
 {
   /// \brief Destructor
   public: virtual ~MotorPlugin();
@@ -61,22 +95,18 @@ class MotorPlugin :
   // Documentation inherited
   public: void PreUpdate(const gz::sim::UpdateInfo &_info,
                          EntityComponentManager &_ecm) final;
-  
-  // Documentation inherited
-  public: void PostUpdate(const gz::sim::UpdateInfo &_info,
-                          const gz::sim::EntityComponentManager &_ecm) final;
 
   // Documentation inherited
   public: void Configure(const Entity &_entity,
                          const std::shared_ptr<const sdf::Element> &_sdf,
                          EntityComponentManager &_ecm,
                          EventManager &) final;
-  
+
   // Documentation inherited
   public: void ConfigureParameters(
       gz::transport::parameters::ParametersRegistry &_registry,
       gz::sim::EntityComponentManager &_ecm) override;
-    
+
   /// \internal
   /// \brief Private implementation
   private: class Impl;
