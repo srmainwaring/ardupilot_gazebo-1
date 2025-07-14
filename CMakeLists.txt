@@ -128,6 +128,17 @@ target_link_libraries(GstCameraPlugin PRIVATE
   ${GST_LINK_LIBRARIES}
 )
 
+add_library(MotorPlugin
+  SHARED
+  src/MotorPlugin.cc
+)
+target_include_directories(MotorPlugin PRIVATE
+  include
+)
+target_link_libraries(MotorPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
 # --------------------------------------------------------------------------- #
 # Install.
 
@@ -137,6 +148,7 @@ install(
   ParachutePlugin
   CameraZoomPlugin
   GstCameraPlugin
+  MotorPlugin
   DESTINATION lib/${PROJECT_NAME}
 )
 
