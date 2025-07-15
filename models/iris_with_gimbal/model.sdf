@@ -326,9 +326,10 @@
       <!-- T-Motor 2216 920KV as used on a Hexsoon 450
       KV 920 RPM/V = KV 96 rad/s/V
       -->
-      <voltage_max>16.8</voltage_max>
+      <voltage_bat>16.0</voltage_bat>
       <speed_constant>96</speed_constant>
-      <coil_resistance>0.115</coil_resistance>
+      <torque_constant>53</torque_constant>
+      <resistance>0.115</resistance>
       <no_load_current>0.8</no_load_current>
     </plugin>
 
