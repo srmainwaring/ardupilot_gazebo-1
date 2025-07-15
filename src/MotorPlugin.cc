@@ -190,14 +190,17 @@ class MotorPlugin::Impl
   /// \brief True if braking is disabled.
   public: bool disableBraking{false};
 
-  /// \brief The maximum terminal voltage (V).
-  public: double voltageMax;
+  /// \brief The battery voltage (terminal voltage) (V).
+  public: double voltageBat;
 
-  /// \brief The motor speed constant K_V.
+  /// \brief The motor speed constant K_V (rad/s/V).
   public: double speedConstant;
 
+  /// \brief The motor torque constant K_Q (A/N.m).
+  public: double torqueConstant;
+
   /// \brief R the motor internal resistance (Ohms).
-  public: double coilResistance;
+  public: double resistance;
 
   /// \brief i_0 the current draw when the motor is run at its
   /// specificed voltage and operational RPM with no load (A).
@@ -412,13 +415,13 @@ void MotorPlugin::Configure(
   }
 
   // Electro-mechanical parameters
-  if (_sdf->HasElement("voltage_max"))
+  if (_sdf->HasElement("voltage_bat"))
   {
-    this->impl->voltageMax = _sdf->Get<double>("voltage_max");
+    this->impl->voltageBat = _sdf->Get<double>("voltage_bat");
   }
   else
   {
-    gzerr << "MotorPlugin: must set `<voltage_max>`." << std::endl;  
+    gzerr << "MotorPlugin: must set `<voltage_bat>`." << std::endl;  
     return;
   }
 
@@ -432,13 +435,23 @@ void MotorPlugin::Configure(
     return;
   }
 
-  if (_sdf->HasElement("coil_resistance"))
+  if (_sdf->HasElement("torque_constant"))
   {
-    this->impl->coilResistance = _sdf->Get<double>("coil_resistance");
+    this->impl->torqueConstant = _sdf->Get<double>("torque_constant");
   }
   else
   {
-    gzerr << "MotorPlugin: must set `<coil_resistance>`." << std::endl;  
+    gzerr << "MotorPlugin: must set `<torque_constant>`." << std::endl;  
+    return;
+  }
+
+  if (_sdf->HasElement("resistance"))
+  {
+    this->impl->resistance = _sdf->Get<double>("resistance");
+  }
+  else
+  {
+    gzerr << "MotorPlugin: must set `<resistance>`." << std::endl;  
     return;
   }
 
@@ -454,9 +467,10 @@ void MotorPlugin::Configure(
 
   {
     gzdbg << "MotorPlugin: system parameters:" << std::endl;
-    gzdbg << "voltage_max: [" << this->impl->voltageMax << "]" << std::endl;
+    gzdbg << "voltage_bat: [" << this->impl->voltageBat << "]" << std::endl;
     gzdbg << "speed_constant: [" << this->impl->speedConstant << "]" << std::endl;
-    gzdbg << "coil_resistance: [" << this->impl->coilResistance << "]" << std::endl;
+    gzdbg << "torque_constant: [" << this->impl->torqueConstant << "]" << std::endl;
+    gzdbg << "resistance: [" << this->impl->resistance << "]" << std::endl;
     gzdbg << "no_load_current: [" << this->impl->noLoadCurrent << "]" << std::endl;
   }
 
@@ -636,19 +650,22 @@ void MotorPlugin::PreUpdate(
       // Mark Drela, MIT Aero & Astro
       // February 2007
       double Omega = actualVel;
-      double K_V = this->impl->speedConstant;
-      double i_0 = this->impl->noLoadCurrent;
-      double R = this->impl->coilResistance;
-      double v_bat = this->impl->voltageMax;
-      double K_Q = K_V;
-      double v_m = Omega / K_V;
       double Q_m = force;
+      double K_V = this->impl->speedConstant;
+      double K_Q = this->impl->torqueConstant;
+      double i_0 = this->impl->noLoadCurrent;
+      double R = this->impl->resistance;
+      double v_bat = this->impl->voltageBat;
+      double v_m = Omega / K_V;
       double i = Q_m * K_Q + i_0;
       double v = v_m + i * R;
       
       {
         gzdbg << "--------------------------------" << std::endl;
         gzdbg << "MotorPlugin: electic motor calcs" << std::endl;
+        gzdbg << "actualVel: " << actualVel << std::endl;
+        gzdbg << "targetVel: " << targetVel << std::endl;
+        gzdbg << "error: " << error << std::endl;
         gzdbg << "Omega: " << Omega << std::endl;
         gzdbg << "K_V:   " << K_V << std::endl;
         gzdbg << "K_Q:   " << K_Q << std::endl;
@@ -740,13 +757,13 @@ void MotorPlugin::PreUpdate(
       // Note: velocityConstant should be KV in rad/s/Volt
 
       double reqV = (desOmega / control.velocityConstant) +   
-                            (control.noLoadCurrent * control.coilResistance);
+                            (control.noLoadCurrent * control.resistance);
       
       // Clamp voltage to available range
       double terminalV = std::max(-control.maxVolts, std::min(control.maxVolts, reqV));
       
       double backEmfV = currOmega / control.velocityConstant;  // Ω/KV
-      double current = (terminalV - backEmfV) / control.coilResistance;
+      double current = (terminalV - backEmfV) / control.resistance;
 
       // Equation (5): Qm = (i - io) / KQ
       double torque = (current - control.noLoadCurrent) * control.velocityConstant;

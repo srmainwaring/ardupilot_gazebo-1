@@ -38,12 +38,15 @@ namespace systems {
 ///
 /// ### Electro-mechanical properties
 ///
-/// - `<voltage_max>` The maximum terminal voltage.
+/// - `<voltage_bat>` The battery voltage (terminal voltage).
 ///
 /// - `<speed_constant>` K_V the motor speed constant, relates the back-emf to
-/// the motor angular velocity omega by the relation V_m = omega / K_V.
+/// the motor angular velocity omega by the relation v_m = omega / K_V.
 ///
-/// - `<coil_resistance>` R the motor internal resistance (Ohms)
+/// - `<torque_constant>` K_Q the motor torque constant, relates the shaft
+/// torque to the current by the relation Q_m = (i - i_0) / K_Q.
+///
+/// - `<resistance>` R the motor internal resistance (Ohms)
 ///
 /// - `<no_load_current>` i_0 the current draw when the motor is run at its
 /// specificed voltage and operational RPM with no load.
