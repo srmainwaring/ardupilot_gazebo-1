@@ -26,6 +26,9 @@
     <plugin filename="gz-sim-navsat-system"
       name="gz::sim::systems::NavSat">
     </plugin>
+    <plugin name="gz::sim::systems::ForceTorque"
+      filename="gz-sim-forcetorque-system">
+    </plugin>
 
     <scene>
       <ambient>1.0 1.0 1.0</ambient>
@@ -179,9 +182,14 @@
             <upper>1.0e16</upper>
           </limit>
           <dynamics>
-            <damping>0.001</damping>
+            <damping>1.0e-4</damping>
           </dynamics>
         </axis>
+        <sensor name="force_torque" type="force_torque">
+          <update_rate>1000</update_rate>
+          <frame>parent</frame>
+          <measure_direction>child_to_parent</measure_direction>
+        </sensor>
       </joint>
 
       <link name="blade_1_link">
@@ -327,7 +335,7 @@
       </plugin>
 
     <!-- lift-drag for ccw prop -->
-    <plugin filename="gz-sim-lift-drag-system"
+    <!-- <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
       <a0>0.3</a0>
       <alpha_stall>1.4</alpha_stall>
@@ -346,7 +354,7 @@
       <visualize_forces>
         <visualize>1</visualize>
         <update_rate>1000</update_rate>
-        <!-- <topic>/model/motor/link/blade_1_link/forces/lift_drag</topic> -->
+        <topic>/model/motor/link/blade_1_link/forces/lift_drag</topic>
       </visualize_forces>
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
@@ -368,9 +376,9 @@
       <visualize_forces>
         <visualize>1</visualize>
         <update_rate>1000</update_rate>
-        <!-- <topic>/model/motor/link/blade_2_link/forces/lift_drag</topic> -->
+        <topic>/model/motor/link/blade_2_link/forces/lift_drag</topic>
       </visualize_forces>
-    </plugin>
+    </plugin> -->
 
     </model>
 
