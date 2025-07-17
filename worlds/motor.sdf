@@ -182,7 +182,11 @@
             <upper>1.0e16</upper>
           </limit>
           <dynamics>
-            <damping>1.0e-4</damping>
+            <!-- damping multiplies angular velocity by (1 - damping) each step -->
+            <damping>1.0e-5</damping>
+
+            <!-- friction multiply  -->
+            <!-- <friction>1.0e-3</friction> -->
           </dynamics>
         </axis>
         <sensor name="force_torque" type="force_torque">
@@ -230,10 +234,10 @@
         <parent>motor_link</parent>
         <child>blade_1_link</child>
         <axis>
-          <xyz>0 0 1</xyz>
+          <xyz>1 0 0</xyz>
           <limit>
-            <lower>0</lower>
-            <upper>0</upper>
+            <lower>0.17453293</lower>
+            <upper>0.17453293</upper>
           </limit>
           <dynamics>
             <damping>0.1</damping>
@@ -279,10 +283,10 @@
         <parent>motor_link</parent>
         <child>blade_2_link</child>
         <axis>
-          <xyz>0 0 1</xyz>
+          <xyz>1 0 0</xyz>
           <limit>
-            <lower>0</lower>
-            <upper>0</upper>
+            <lower>0.17453293</lower>
+            <upper>0.17453293</upper>
           </limit>
           <dynamics>
             <damping>0.1</damping>
@@ -334,20 +338,20 @@
         <no_load_current>0.8</no_load_current>
       </plugin>
 
-    <!-- lift-drag for ccw prop -->
-    <!-- <plugin filename="gz-sim-lift-drag-system"
+    <!-- lift-drag for ccw prop  NACA 6412 Re 200000-->
+    <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
-      <a0>0.3</a0>
-      <alpha_stall>1.4</alpha_stall>
-      <cla>4.2500</cla>
-      <cda>0.10</cda>
-      <cma>0.0</cma>
-      <cla_stall>-0.025</cla_stall>
-      <cda_stall>0.0</cda_stall>
-      <cma_stall>0.0</cma_stall>
+      <a0>0.1000</a0>
+      <cla>6.2000</cla>
+      <cda>0.0800</cda>
+      <cma>0.0000</cma>
+      <alpha_stall>0.1710</alpha_stall>
+      <cla_stall>-3.0000</cla_stall>
+      <cda_stall>0.8000</cda_stall>
+      <cma_stall>0.0000</cma_stall>
       <area>0.0013</area>
       <air_density>1.2041</air_density>
-      <cp>0 0 0</cp>
+      <cp>0.02 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>blade_1_link</link_name>
@@ -359,17 +363,17 @@
     </plugin>
     <plugin filename="gz-sim-lift-drag-system"
         name="gz::sim::systems::LiftDrag">
-      <a0>0.3</a0>
-      <alpha_stall>1.4</alpha_stall>
-      <cla>4.2500</cla>
-      <cda>0.10</cda>
-      <cma>0.0</cma>
-      <cla_stall>-0.025</cla_stall>
-      <cda_stall>0.0</cda_stall>
-      <cma_stall>0.0</cma_stall>
+      <a0>0.1000</a0>
+      <cla>6.2000</cla>
+      <cda>0.0800</cda>
+      <cma>0.0000</cma>
+      <alpha_stall>0.1710</alpha_stall>
+      <cla_stall>-3.0000</cla_stall>
+      <cda_stall>0.8000</cda_stall>
+      <cma_stall>0.0000</cma_stall>
       <area>0.0013</area>
       <air_density>1.2041</air_density>
-      <cp>0 0 0</cp>
+      <cp>0.02 0 0</cp>
       <forward>0 1 0</forward>
       <upward>0 0 1</upward>
       <link_name>blade_2_link</link_name>
@@ -378,7 +382,7 @@
         <update_rate>1000</update_rate>
         <topic>/model/motor/link/blade_2_link/forces/lift_drag</topic>
       </visualize_forces>
-    </plugin> -->
+    </plugin>
 
     </model>
 
