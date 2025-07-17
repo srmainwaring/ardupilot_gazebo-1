@@ -5,6 +5,7 @@ Publish sensor data using DroneCAN
 
 import dronecan
 import math
+import os
 import threading
 import time
 
@@ -15,24 +16,28 @@ GZ_VERSION_GARDEN = "garden"
 GZ_VERSION_HARMONIC = "harmonic"
 GZ_VERSION_IONIC = "ionic"
 
-GZ_VERSION = GZ_VERSION_HARMONIC
 
-if GZ_VERSION == GZ_VERSION_GARDEN:
+def gz_version():
+    """Return the environment variable GZ_VERSION if set, else default to 'harmonic'"""
+    return os.environ.get("GZ_VERSION", GZ_VERSION_HARMONIC)
+
+
+if gz_version() == GZ_VERSION_GARDEN:
     from gz.msgs9.model_pb2 import Model
-elif GZ_VERSION == GZ_VERSION_HARMONIC:
+elif gz_version() == GZ_VERSION_HARMONIC:
     from gz.msgs10.model_pb2 import Model
-elif GZ_VERSION == GZ_VERSION_IONIC:
+elif gz_version() == GZ_VERSION_IONIC:
     from gz.msgs11.model_pb2 import Model
 
 
 # Importing gz.transport into the module global scope causes an odd
 # multiprocessing conflict with dronecan. This is a workaround.
 def gz_node():
-    if GZ_VERSION == GZ_VERSION_GARDEN:
+    if gz_version() == GZ_VERSION_GARDEN:
         from gz.transport12 import Node
-    elif GZ_VERSION == GZ_VERSION_HARMONIC:
+    elif gz_version() == GZ_VERSION_HARMONIC:
         from gz.transport13 import Node
-    elif GZ_VERSION == GZ_VERSION_IONIC:
+    elif gz_version() == GZ_VERSION_IONIC:
         from gz.transport14 import Node
 
     return Node()
