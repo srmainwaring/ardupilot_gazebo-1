@@ -23,11 +23,29 @@ def gz_version():
 
 
 if gz_version() == GZ_VERSION_GARDEN:
+    from gz.msgs9.air_speed_pb2 import AirSpeed
+    from gz.msgs9.altimeter_pb2 import Altimeter
+    from gz.msgs9.battery_state_pb2 import BatteryState
+    from gz.msgs9.fluid_pressure_pb2 import FluidPressure
+    from gz.msgs9.magnetometer_pb2 import Magnetometer
     from gz.msgs9.model_pb2 import Model
+    from gz.msgs9.navsat_pb2 import NavSat
 elif gz_version() == GZ_VERSION_HARMONIC:
+    from gz.msgs10.air_speed_pb2 import AirSpeed
+    from gz.msgs10.altimeter_pb2 import Altimeter
+    from gz.msgs10.battery_state_pb2 import BatteryState
+    from gz.msgs10.fluid_pressure_pb2 import FluidPressure
+    from gz.msgs10.magnetometer_pb2 import Magnetometer
     from gz.msgs10.model_pb2 import Model
+    from gz.msgs10.navsat_pb2 import NavSat
 elif gz_version() == GZ_VERSION_IONIC:
+    from gz.msgs11.air_speed_pb2 import AirSpeed
+    from gz.msgs11.altimeter_pb2 import Altimeter
+    from gz.msgs11.battery_state_pb2 import BatteryState
+    from gz.msgs11.fluid_pressure_pb2 import FluidPressure
+    from gz.msgs11.magnetometer_pb2 import Magnetometer
     from gz.msgs11.model_pb2 import Model
+    from gz.msgs11.navsat_pb2 import NavSat
 
 
 # Importing gz.transport into the module global scope causes an odd
@@ -48,7 +66,7 @@ def celsius_to_kelvin(value):
     return ZERO_CELSIUS_KELVIN + value
 
 
-class JointStates:
+class JointStatesSubscriber:
     def __init__(self, world, model, debug):
 
         self._world = world
@@ -61,7 +79,9 @@ class JointStates:
         # Model
         self._model_do_print_msg = self._debug
         self._model_msg = None
-        self._model_topic = f"/world/{self._world}/model/{self._model}/joint_state"
+        self._model_topic = (
+            f"/world/{self._world}" f"/model/{self._model}" f"/joint_state"
+        )
         self._model_sub = self._node.subscribe(Model, self._model_topic, self._model_cb)
 
     def _model_cb(self, msg):
@@ -96,6 +116,61 @@ class JointStates:
         return vel_rads
 
 
+class MagnetometerSubscriber:
+    def __init__(self, world, model, link, sensor_name, debug):
+
+        self._world = world
+        self._model = model
+        self._link = link
+        self._sensor_type = "magnetometer"
+        self._sensor_name = sensor_name
+        self._debug = debug
+
+        self._lock = threading.Lock()
+        self._node = gz_node()
+
+        # Magnetometer
+        self._do_print_msg = self._debug
+        self._msg = None
+        self._topic = (
+            f"/world/{self._world}"
+            f"/model/{self._model}"
+            f"/link/{self._link}"
+            f"/sensor/{self._sensor_name}/{self._sensor_type}"
+        )
+        self._sub = self._node.subscribe(Magnetometer, self._topic, self._cb)
+
+    def _cb(self, msg):
+        with self._lock:
+            self._msg = msg
+            do_print_msg = self._do_print_msg
+
+        if do_print_msg:
+            print(msg)
+
+    def field_tesla(self):
+        with self._lock:
+            msg = self._msg
+
+        if msg is None:
+            return float("nan")
+
+        return msg.field_tesla
+
+    def field_gauss(self):
+        with self._lock:
+            msg = self._msg
+
+        if msg is None:
+            return [float("nan") for x in range(3)]
+
+        return [
+            msg.field_tesla.x * 1.0e4,
+            msg.field_tesla.y * 1.0e4,
+            msg.field_tesla.z * 1.0e4,
+        ]
+
+
 class DroneCANNode:
     def __init__(self, uri, node_id, rate, debug):
         self._uri = uri
@@ -103,11 +178,14 @@ class DroneCANNode:
         self._rate = rate
         self._debug = debug
 
+        # TODO add methods to size
         self._rpm = [0, 0, 0, 0]
+        self._magnetic_field_ga = [0]
 
         self._lock = threading.Lock()
         self._node = None
         self._esc_pub = None
+        self._mag_pub = None
         self._task_thread = threading.Thread(target=self._run)
         self._task_thread.start()
 
@@ -131,6 +209,7 @@ class DroneCANNode:
         ) as self._node:
             # Setup to publish sensor measurement
             self._esc_pub = self._node.periodic(1.0 / rate, self._pub_esc_status)
+            self._mag_pub = self._node.periodic(1.0 / rate, self._pub_magnetic_field_strength)
 
             # Set mode and health status
             self._node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
@@ -180,10 +259,29 @@ class DroneCANNode:
         if debug:
             print(dronecan.to_yaml(msg))
 
-    def set_rpm(self, esc_index, rpm):
+    def _pub_magnetic_field_strength(self):
         with self._lock:
-            self._rpm[esc_index] = rpm
+            debug = self._debug
+            magnetic_field_ga = self._magnetic_field_ga
 
+        msg = dronecan.uavcan.equipment.ahrs.MagneticFieldStrength2()
+
+        msg.sensor_id = 0
+        # print(f"magnetic_field_ga: {magnetic_field_ga[0]}")
+        msg.magnetic_field_ga = magnetic_field_ga[0]
+        msg.magnetic_field_covariance = []
+        self._node.broadcast(msg)
+
+        if debug:
+            print(dronecan.to_yaml(msg))
+
+    def set_rpm(self, index, value):
+        with self._lock:
+            self._rpm[index] = value
+
+    def set_magnetic_field_ga(self, index, value):
+        with self._lock:
+            self._magnetic_field_ga[index] = value
 
 # converters
 def to_uavcan_equipment_air_data_StaticPressure():
@@ -566,7 +664,16 @@ def main():
     args = parser.parse_args()
 
     # Subscribe to joint states
-    joint_states = JointStates(args.world, args.model, args.debug)
+    joint_states = JointStatesSubscriber(args.world, args.model, args.debug)
+
+    # Subscribe to magnetic field
+    magnetometer = MagnetometerSubscriber(
+        args.world,
+        args.model,
+        link="base_link",
+        sensor_name="magnetometer_sensor",
+        debug=args.debug,
+    )
 
     # DroneCAN node
     dronecan_node = DroneCANNode(args.uri, args.node_id, args.rate, args.debug)
@@ -579,17 +686,22 @@ def main():
 
     # Run the node
     while True:
-        # Read from joint states
+        # Joint RPM
         rpm0 = int(rads_to_rpm(joint_states.joint_velocity("rotor_0_joint")))
         rpm1 = int(rads_to_rpm(joint_states.joint_velocity("rotor_1_joint")))
         rpm2 = int(rads_to_rpm(joint_states.joint_velocity("rotor_2_joint")))
         rpm3 = int(rads_to_rpm(joint_states.joint_velocity("rotor_3_joint")))
 
-        # Write to dronecan node
         dronecan_node.set_rpm(0, rpm0)
         dronecan_node.set_rpm(1, rpm1)
         dronecan_node.set_rpm(2, rpm2)
         dronecan_node.set_rpm(3, rpm3)
+
+        # Magnetic field
+        mag0 = magnetometer.field_gauss()
+
+        dronecan_node.set_magnetic_field_ga(0, mag0)
+
 
         time.sleep(0.01)
 
@@ -683,6 +795,6 @@ def show_msg_types():
 
 
 if __name__ == "__main__":
-    # main()
-    show_msg_types()
-    test_converters()
+    main()
+    # show_msg_types()
+    # test_converters()
