@@ -43,6 +43,11 @@ def gz_node():
     return Node()
 
 
+def celsius_to_kelvin(value):
+    ZERO_CELSIUS_KELVIN = float(273.15)
+    return ZERO_CELSIUS_KELVIN + value
+
+
 class JointStates:
     def __init__(self, world, model, debug):
 
@@ -153,7 +158,7 @@ class DroneCANNode:
         msg.error_count = 0
         msg.voltage = 4.0 * 4.2
         msg.current = 5.0
-        msg.temperature = 45.0 + 273.15
+        msg.temperature = celsius_to_kelvin(45.0)
         msg.power_rating_pct = 50
 
         msg.esc_index = 0
@@ -183,21 +188,56 @@ class DroneCANNode:
 # converters
 def to_uavcan_equipment_air_data_StaticPressure():
     msg = dronecan.uavcan.equipment.air_data.StaticPressure()
+    msg.static_pressure = 0.0
+    msg.static_pressure_variance = 0.0
     return msg
 
 
 def to_uavcan_equipment_air_data_StaticTemperature():
     msg = dronecan.uavcan.equipment.air_data.StaticTemperature()
+    msg.static_temperature = 0.0
+    msg.static_temperature_variance = 0.0
     return msg
 
 
 def to_uavcan_equipment_power_BatteryInfo():
     msg = dronecan.uavcan.equipment.power.BatteryInfo()
+    # Kelvin
+    msg.temperature = celsius_to_kelvin(20.0)
+    # Volt
+    msg.voltage = 6 * 4.0
+    # Ampere
+    msg.current = 0.0
+    # Watt
+    msg.average_power_10sec = 0.0
+    # Watt hours
+    msg.remaining_capacity_wh = 0.0
+    # Watt hours
+    msg.full_charge_capacity_wh = 0.0
+    # hours
+    msg.hours_to_full_charge = 0.0
+    msg.status_flags = msg.STATUS_FLAG_IN_USE
+    msg.state_of_health_pct = msg.STATE_OF_HEALTH_UNKNOWN
+    msg.state_of_charge_pct = 100
+    msg.state_of_charge_pct_stdev = 1
+    msg.battery_id = 0
+    msg.model_instance_id = 0
+    msg.model_name = "MODEL_NAME_UNKNOWN"
     return msg
 
 
 def to_ardupilot_equipment_power_BatteryInfoAux():
     msg = dronecan.ardupilot.equipment.power.BatteryInfoAux()
+    msg.timestamp.usec = msg.timestamp.UNKNOWN
+    msg.voltage_cell = [4.0 for x in range(6)]
+    msg.cycle_count = 0
+    msg.over_discharge_count = 0
+    # Ampere
+    msg.max_current = 0.0
+    # Volt
+    msg.nominal_voltage = 0.0
+    msg.is_powering_off = False
+    msg.battery_id = 0
     return msg
 
 
@@ -237,81 +277,224 @@ def to_dronecan_sensors_magnetometer_MagneticFieldStrengthHiRes():
 
 def to_uavcan_equipment_ice_reciprocating_Status():
     msg = dronecan.uavcan.equipment.ice.reciprocating.Status()
+    msg.state = 0
+    msg.flags = 0
+    msg.engine_load_percent = 0
+    msg.engine_speed_rpm = 0
+    msg.spark_dwell_time_ms = 0.0
+    msg.atmospheric_pressure_kpa = 0.0
+    msg.intake_manifold_pressure_kpa = 0.0
+    msg.intake_manifold_temperature = 0.0
+    msg.coolant_temperature = 0.0
+    msg.oil_pressure = 0.0
+    msg.oil_temperature = 0.0
+    msg.fuel_pressure = 0.0
+    msg.fuel_consumption_rate_cm3pm = 0.0
+    msg.estimated_consumed_fuel_volume_cm3 = 0.0
+    msg.throttle_position_percent = 0
+    msg.ecu_index = 0
+    msg.spark_plug_usage = 0
+    # cylinder_status=ArrayValue(type=uavcan.equipment.ice.reciprocating.CylinderStatus[<=16], items=[])
     return msg
 
 
 def to_uavcan_equipment_esc_Status():
     msg = dronecan.uavcan.equipment.esc.Status()
+    msg.error_count = 0
+    # Volt
+    msg.voltage = 0.0
+    # Ampere
+    msg.current = 0.0
+    # Kelvin
+    msg.temperature = celsius_to_kelvin(20.0)
+    msg.rpm = 0
+    msg.power_rating_pct = 0
+    msg.esc_index = 0
     return msg
 
 
 def to_uavcan_equipment_esc_StatusExtended():
     msg = dronecan.uavcan.equipment.esc.StatusExtended()
+    msg.input_pct = 0
+    msg.output_pct = 0
+    # Celsius in [-256, 255]
+    msg.motor_temperature_degC = 20
+    # Angle in degrees
+    msg.motor_angle = 0
+    msg.status_flags = 0
+    msg.esc_index = 0
     return msg
 
 
 def to_uavcan_equipment_gnss_Fix2():
     msg = dronecan.uavcan.equipment.gnss.Fix2()
+    msg.timestamp.usec = msg.timestamp.UNKNOWN
+    msg.gnss_timestamp.usec = msg.gnss_timestamp.UNKNOWN
+    msg.gnss_time_standard = msg.GNSS_TIME_STANDARD_UTC
+    msg.num_leap_seconds = msg.NUM_LEAP_SECONDS_UNKNOWN
+    msg.longitude_deg_1e8 = 0
+    msg.latitude_deg_1e8 = 0
+    msg.height_ellipsoid_mm = 0
+    msg.height_msl_mm = 0
+    msg.ned_velocity = [0.0, 0.0, 0.0]
+    msg.sats_used = 0
+    msg.status = msg.STATUS_3D_FIX
+    msg.mode = msg.MODE_DGPS
+    msg.sub_mode = msg.SUB_MODE_DGPS_OTHER
+    msg.covariance == []
+    msg.pdop = float("nan")
+    # dronecan.uavcan.equipment.gnss.ECEFPositionVelocity()
+    # XYZ velocity in m/s
+    msg.ecef_position_velocity.velocity_xyz = [0.0, 0.0, 0.0]
+    # XYZ-axis coordinates in mm
+    msg.ecef_position_velocity.position_xyz_mm = [0, 0, 0]
+    # Position and velocity covariance in the ECEF frame. Units are m^2 for position,
+    # (m/s)^2 for velocity, and m^2/s for position/velocity.
+    msg.ecef_position_velocity.covariance = []
     return msg
 
 
 def to_uavcan_equipment_gnss_Auxiliary():
     msg = dronecan.uavcan.equipment.gnss.Auxiliary()
+    msg.gdop = float("nan")
+    msg.pdop = float("nan")
+    msg.hdop = float("nan")
+    msg.vdop = float("nan")
+    msg.tdop = float("nan")
+    msg.ndop = float("nan")
+    msg.edop = float("nan")
+    msg.sats_visible = 12
+    msg.sats_used = 8
     return msg
 
 
 def to_ardupilot_gnss_Heading():
     msg = dronecan.ardupilot.gnss.Heading()
+    msg.heading_valid = False
+    msg.heading_accuracy_valid = False
+    # radians
+    msg.heading_rad = 0.0
+    # radians
+    msg.heading_accuracy_rad = 0.0
     return msg
 
 
 def to_ardupilot_gnss_Status():
     msg = dronecan.ardupilot.gnss.Status()
+    msg.error_codes = 0
+    msg.healthy = False
+    msg.status = msg.STATUS_ARMABLE
     return msg
 
 
 def to_ardupilot_gnss_MovingBaselineData():
     msg = dronecan.ardupilot.gnss.MovingBaselineData()
+    # length of data is set per the number of bytes for pkt in
+    # libraries/AP_GPS/RTCM3_Parser.h
+    msg.data = [int(0) for x in range(10)]
     return msg
 
 
 def to_ardupilot_gnss_RelPosHeading():
     msg = dronecan.ardupilot.gnss.RelPosHeading()
+    msg.timestamp.usec = msg.timestamp.UNKNOWN
+    msg.reported_heading_acc_available = False
+    # degrees
+    msg.reported_heading_deg = float("nan")
+    # degrees
+    msg.reported_heading_acc_deg = float("nan")
+    # metres
+    msg.relative_distance_m = float("nan")
+    # metres
+    msg.relative_down_pos_m = float("nan")
     return msg
 
 
 def to_com_hex_equipment_flow_Measurement():
     msg = dronecan.com.hex.equipment.flow.Measurement()
+    # Integration Interval in seconds
+    msg.integration_interval = 0.0
+    # Integrated Gyro Data in radians
+    msg.rate_gyro_integral = [0.0, 0.0]
+    # Integrated LOS Data in radians
+    msg.flow_integral = [0.0, 0.0]
+    # Flow Data Quality Lowest(0)-Highest(255) Unitless
+    quality = 0
     return msg
 
 
 def to_ardupilot_equipment_proximity_sensor_Proximity():
     msg = dronecan.ardupilot.equipment.proximity_sensor.Proximity()
+    msg.sensor_id = 0
+    msg.reading_type = msg.READING_TYPE_GOOD
+    msg.flags = msg.FLAGS_NONE
+    # degrees in body frame
+    msg.yaw = 0.0
+    # degrees in body frame
+    msg.pitch = 0.0
+    # metres
+    msg.distance = 0.0
     return msg
 
 
 def to_uavcan_equipment_range_sensor_Measurement():
+    roll_rad = 0.0
+    pitch_rad = 0.0
+    yaw_rad = 0.0
     msg = dronecan.uavcan.equipment.range_sensor.Measurement()
+    msg.timestamp.usec = msg.timestamp.UNKNOWN
+    msg.sensor_id = 0
+
+    msg.beam_orientation_in_body_frame.fixed_axis_roll_pitch_yaw = [
+        int(msg.beam_orientation_in_body_frame.ANGLE_MULTIPLIER * roll_rad),
+        int(msg.beam_orientation_in_body_frame.ANGLE_MULTIPLIER * pitch_rad),
+        int(msg.beam_orientation_in_body_frame.ANGLE_MULTIPLIER * yaw_rad),
+    ]
+    msg.beam_orientation_in_body_frame.orientation_defined = True
+    msg.field_of_view = 0.0
+    msg.sensor_type = msg.SENSOR_TYPE_LIDAR
+    msg.reading_type = msg.READING_TYPE_VALID_RANGE
+    # metre
+    msg.range = 2.0
     return msg
 
 
 def to_dronecan_sensors_rc_RCInput():
     msg = dronecan.dronecan.sensors.rc.RCInput()
+    msg.status = msg.STATUS_QUALITY_VALID
+    msg.quality = 255
+    msg.id = 0
+    msg.rcin = [0 for x in range(16)]
     return msg
 
 
 def to_dronecan_sensors_rpm_RPM():
     msg = dronecan.dronecan.sensors.rpm.RPM()
+    msg.sensor_id = 0
+    msg.flags = msg.FLAGS_UNHEALTHY
+    msg.rpm = 0.0
     return msg
 
 
 def to_uavcan_equipment_actuator_Status():
     msg = dronecan.uavcan.equipment.actuator.Status()
+    msg.actuator_id = 0
+    # metre or radian
+    msg.position = float("nan")
+    # Newton or Newton metre
+    msg.force = float("nan")
+    # metre per second or radian per second
+    msg.speed = float("nan")
+    msg.power_rating_pct = msg.POWER_RATING_PCT_UNKNOWN
     return msg
 
 
 def to_uavcan_equipment_device_Temperature():
     msg = dronecan.uavcan.equipment.device.Temperature()
+    msg.device_id = 0
+    # Kelvin
+    msg.temperature = celsius_to_kelvin(20.0)
+    msg.error_flags = 0
     return msg
 
 
