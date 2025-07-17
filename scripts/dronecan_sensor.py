@@ -175,6 +175,195 @@ class DroneCANNode:
             self._rpm[esc_index] = rpm
 
 
+# converters
+def to_uavcan_equipment_air_data_StaticPressure():
+    msg = dronecan.uavcan.equipment.air_data.StaticPressure()
+    return msg
+
+
+def to_uavcan_equipment_air_data_StaticTemperature():
+    msg = dronecan.uavcan.equipment.air_data.StaticTemperature()
+    return msg
+
+
+def to_uavcan_equipment_power_BatteryInfo():
+    msg = dronecan.uavcan.equipment.power.BatteryInfo()
+    return msg
+
+
+def to_ardupilot_equipment_power_BatteryInfoAux():
+    msg = dronecan.ardupilot.equipment.power.BatteryInfoAux()
+    return msg
+
+
+def to_ardupilot_indication_Button():
+    msg = dronecan.ardupilot.indication.Button()
+    return msg
+
+
+def to_uavcan_equipment_ahrs_MagneticFieldStrength():
+    msg = dronecan.uavcan.equipment.ahrs.MagneticFieldStrength()
+    msg.magnetic_field_ga = [0.0 for x in range(3)]
+    msg.magnetic_field_covariance = [0.0 for x in range(9)]
+    return msg
+
+
+def to_uavcan_equipment_ahrs_MagneticFieldStrength2():
+    msg = dronecan.uavcan.equipment.ahrs.MagneticFieldStrength2()
+    msg.sensor_id = 0
+    msg.magnetic_field_ga = [0.0 for x in range(3)]
+    msg.magnetic_field_covariance = [0.0 for x in range(9)]
+    return msg
+
+
+def to_dronecan_sensors_magnetometer_MagneticFieldStrengthHiRes():
+    msg = dronecan.dronecan.sensors.magnetometer.MagneticFieldStrengthHiRes()
+    msg.sensor_id = 0
+    msg.magnetic_field_ga = [0.0 for x in range(3)]
+    return msg
+
+
+def to_dronecan_sensors_magnetometer_MagneticFieldStrengthHiRes():
+    msg = dronecan.dronecan.sensors.magnetometer.MagneticFieldStrengthHiRes()
+    msg.sensor_id = 0
+    msg.magnetic_field_ga = [0.0 for x in range(3)]
+    return msg
+
+
+def to_uavcan_equipment_ice_reciprocating_Status():
+    msg = dronecan.uavcan.equipment.ice.reciprocating.Status()
+    return msg
+
+
+def to_uavcan_equipment_esc_Status():
+    msg = dronecan.uavcan.equipment.esc.Status()
+    return msg
+
+
+def to_uavcan_equipment_esc_StatusExtended():
+    msg = dronecan.uavcan.equipment.esc.StatusExtended()
+    return msg
+
+
+def to_uavcan_equipment_gnss_Fix2():
+    msg = dronecan.uavcan.equipment.gnss.Fix2()
+    return msg
+
+
+def to_uavcan_equipment_gnss_Auxiliary():
+    msg = dronecan.uavcan.equipment.gnss.Auxiliary()
+    return msg
+
+
+def to_ardupilot_gnss_Heading():
+    msg = dronecan.ardupilot.gnss.Heading()
+    return msg
+
+
+def to_ardupilot_gnss_Status():
+    msg = dronecan.ardupilot.gnss.Status()
+    return msg
+
+
+def to_ardupilot_gnss_MovingBaselineData():
+    msg = dronecan.ardupilot.gnss.MovingBaselineData()
+    return msg
+
+
+def to_ardupilot_gnss_RelPosHeading():
+    msg = dronecan.ardupilot.gnss.RelPosHeading()
+    return msg
+
+
+def to_com_hex_equipment_flow_Measurement():
+    msg = dronecan.com.hex.equipment.flow.Measurement()
+    return msg
+
+
+def to_ardupilot_equipment_proximity_sensor_Proximity():
+    msg = dronecan.ardupilot.equipment.proximity_sensor.Proximity()
+    return msg
+
+
+def to_uavcan_equipment_range_sensor_Measurement():
+    msg = dronecan.uavcan.equipment.range_sensor.Measurement()
+    return msg
+
+
+def to_dronecan_sensors_rc_RCInput():
+    msg = dronecan.dronecan.sensors.rc.RCInput()
+    return msg
+
+
+def to_dronecan_sensors_rpm_RPM():
+    msg = dronecan.dronecan.sensors.rpm.RPM()
+    return msg
+
+
+def to_uavcan_equipment_actuator_Status():
+    msg = dronecan.uavcan.equipment.actuator.Status()
+    return msg
+
+
+def to_uavcan_equipment_device_Temperature():
+    msg = dronecan.uavcan.equipment.device.Temperature()
+    return msg
+
+
+def test_converters():
+    # Barometer
+    print(to_uavcan_equipment_air_data_StaticPressure())
+    print(to_uavcan_equipment_air_data_StaticTemperature())
+
+    # Battery Monitor
+    print(to_uavcan_equipment_power_BatteryInfo())
+    print(to_ardupilot_equipment_power_BatteryInfoAux())
+
+    # Button
+    print(to_ardupilot_indication_Button())
+
+    # Compass
+    print(to_uavcan_equipment_ahrs_MagneticFieldStrength())
+    print(to_uavcan_equipment_ahrs_MagneticFieldStrength2())
+    print(to_dronecan_sensors_magnetometer_MagneticFieldStrengthHiRes())
+
+    # EFI
+    print(to_uavcan_equipment_ice_reciprocating_Status())
+
+    # ESC
+    print(to_uavcan_equipment_esc_Status())
+    print(to_uavcan_equipment_esc_StatusExtended())
+
+    # GPS
+    print(to_uavcan_equipment_gnss_Fix2())
+    print(to_uavcan_equipment_gnss_Auxiliary())
+    print(to_ardupilot_gnss_Heading())
+    print(to_ardupilot_gnss_Status())
+    print(to_ardupilot_gnss_MovingBaselineData())
+    print(to_ardupilot_gnss_RelPosHeading())
+
+    # OpticalFlow
+    print(to_com_hex_equipment_flow_Measurement())
+
+    # Proximity
+    print(to_ardupilot_equipment_proximity_sensor_Proximity())
+
+    # Rangefinder
+    print(to_uavcan_equipment_range_sensor_Measurement())
+
+    # RCProtocol
+    print(to_dronecan_sensors_rc_RCInput())
+
+    # RPM
+    print(to_dronecan_sensors_rpm_RPM())
+
+    # Servo
+    print(to_uavcan_equipment_actuator_Status())
+
+    # Temperature
+    print(to_uavcan_equipment_device_Temperature())
+
+
 def main():
     # Command line args
     parser = ArgumentParser(description="Publish DroneCAN ESC")
@@ -217,5 +406,95 @@ def main():
         time.sleep(0.01)
 
 
+def show_msg_types():
+    """Print all DroneCAN message types handled by ArduPilot"""
+
+    print("Airspeed")
+    print(dronecan.uavcan.equipment.air_data.RawAirData())
+    print(dronecan.dronecan.sensors.hygrometer.Hygrometer())
+    print("--------------------")
+
+    print("Barometer")
+    print(dronecan.uavcan.equipment.air_data.StaticPressure())
+    print(dronecan.uavcan.equipment.air_data.StaticTemperature())
+    print("--------------------")
+
+    print("Battery Monitor")
+    print(dronecan.uavcan.equipment.power.BatteryInfo())
+    print(dronecan.ardupilot.equipment.power.BatteryInfoAux())
+    # print(dronecan.mppt.Stream())
+    print("--------------------")
+
+    print("Button")
+    print(dronecan.ardupilot.indication.Button())
+    print("--------------------")
+
+    print("Compass")
+    print(dronecan.uavcan.equipment.ahrs.MagneticFieldStrength())
+    print(dronecan.uavcan.equipment.ahrs.MagneticFieldStrength2())
+    print(dronecan.dronecan.sensors.magnetometer.MagneticFieldStrengthHiRes())
+    print("--------------------")
+
+    print("EFI")
+    print(dronecan.uavcan.equipment.ice.reciprocating.Status())
+    print("--------------------")
+
+    print("ESC")
+    print(dronecan.uavcan.equipment.esc.Status())
+    print(dronecan.uavcan.equipment.esc.StatusExtended())
+    print("--------------------")
+
+    print("GPS")
+    print(dronecan.uavcan.equipment.gnss.Fix2())
+    print(dronecan.uavcan.equipment.gnss.Auxiliary())
+    print(dronecan.ardupilot.gnss.Heading())
+    print(dronecan.ardupilot.gnss.Status())
+    print(dronecan.ardupilot.gnss.MovingBaselineData())
+    print(dronecan.ardupilot.gnss.RelPosHeading())
+    print("--------------------")
+
+    print("LED")
+    print("--------------------")
+
+    print("OpticalFlow")
+    print(dronecan.com.hex.equipment.flow.Measurement())
+    print("--------------------")
+
+    print("Proximity")
+    print(dronecan.ardupilot.equipment.proximity_sensor.Proximity())
+    print("--------------------")
+
+    print("Rangefinder")
+    print(dronecan.uavcan.equipment.range_sensor.Measurement())
+    print("--------------------")
+
+    print("RCProtocol")
+    print(dronecan.dronecan.sensors.rc.RCInput())
+    print("--------------------")
+
+    print("RPM")
+    print(dronecan.dronecan.sensors.rpm.RPM())
+    print("--------------------")
+
+    print("Servo")
+    print(dronecan.uavcan.equipment.actuator.Status())
+    print("--------------------")
+
+    print("Temperature")
+    print(dronecan.uavcan.equipment.device.Temperature())
+    print("--------------------")
+
+    print("Vendor")
+    print(dronecan.com.hex.equipment.flow.Measurement())
+    print(dronecan.com.himark.servo.ServoInfo())
+    print(dronecan.com.volz.servo.ActuatorStatus())
+    print(dronecan.com.hobbywing.esc.GetEscID())
+    print(dronecan.com.hobbywing.esc.StatusMsg1())
+    print(dronecan.com.hobbywing.esc.StatusMsg2())
+    print("--------------------")
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+    show_msg_types()
+    test_converters()
