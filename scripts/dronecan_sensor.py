@@ -222,12 +222,16 @@ class NavSatConverter:
         nsec = gz_msg.header.stamp.nsec
         usec = int(1000000 * sec + nsec / 1000)
 
-        lat_deg = gz_msg.longitude_deg
+        lat_deg = gz_msg.latitude_deg
         lon_deg = gz_msg.longitude_deg
         alt_wgs84_m = gz_msg.altitude
         vel_e = gz_msg.velocity_east
         vel_n = gz_msg.velocity_north
         vel_u = gz_msg.velocity_up
+
+        # TODO: look up the geoid height and adjust
+        geoid_m = 0
+        alt_msl_m = alt_wgs84_m + geoid_m
 
         # TODO: need a conversion from height_ellipsoid_mm to height_msl_mm
 
@@ -252,7 +256,7 @@ class NavSatConverter:
         msg.longitude_deg_1e8 = int(lon_deg * 1e8)
         msg.latitude_deg_1e8 = int(lat_deg * 1e8)
         msg.height_ellipsoid_mm = int(alt_wgs84_m * 1e3)
-        msg.height_msl_mm = 0
+        msg.height_msl_mm = int(alt_msl_m * 1e3)
         msg.ned_velocity = [vel_n, vel_e, vel_u * -1.0]
         msg.sats_used = 0
         msg.status = msg.STATUS_3D_FIX
