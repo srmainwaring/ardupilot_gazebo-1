@@ -11,6 +11,7 @@ import time
 
 from argparse import ArgumentParser
 from contextlib import closing
+from dataclasses import dataclass
 
 GZ_VERSION_GARDEN = "garden"
 GZ_VERSION_HARMONIC = "harmonic"
@@ -66,7 +67,7 @@ def celsius_to_kelvin(value):
     return ZERO_CELSIUS_KELVIN + value
 
 
-class JointStatesSubscriber:
+class JointStatesConverter:
     def __init__(self, world, model, debug):
 
         self._world = world
@@ -116,7 +117,7 @@ class JointStatesSubscriber:
         return vel_rads
 
 
-class MagnetometerSubscriber:
+class MagnetometerConverter:
     def __init__(self, world, model, link, sensor_name, debug):
 
         self._world = world
@@ -171,6 +172,106 @@ class MagnetometerSubscriber:
         ]
 
 
+class NavSatConverter:
+    def __init__(self, world, model, link, sensor_name, debug):
+
+        self._world = world
+        self._model = model
+        self._link = link
+        self._sensor_type = "navsat"
+        self._sensor_name = sensor_name
+        self._debug = debug
+
+        self._lock = threading.Lock()
+        self._node = gz_node()
+
+        # Magnetometer
+        self._do_print_msg = self._debug
+        self._msg = None
+        self._topic = (
+            f"/world/{self._world}"
+            f"/model/{self._model}"
+            f"/link/{self._link}"
+            f"/sensor/{self._sensor_name}/{self._sensor_type}"
+        )
+        self._sub = self._node.subscribe(NavSat, self._topic, self._cb)
+
+    def _cb(self, msg):
+        with self._lock:
+            self._msg = msg
+            do_print_msg = self._do_print_msg
+
+        if do_print_msg:
+            print(msg)
+
+    def last_msg(self):
+        with self._lock:
+            msg = self._msg
+
+        return msg
+
+    def uavcan_equipment_gnss_fix2(self):
+        with self._lock:
+            gz_msg = self._msg
+
+        if gz_msg is None:
+            return None
+
+        # Gazebo sim time
+        sec = gz_msg.header.stamp.sec
+        nsec = gz_msg.header.stamp.nsec
+        usec = int(1000000 * sec + nsec / 1000)
+
+        lat_deg = gz_msg.longitude_deg
+        lon_deg = gz_msg.longitude_deg
+        alt_wgs84_m = gz_msg.altitude
+        vel_e = gz_msg.velocity_east
+        vel_n = gz_msg.velocity_north
+        vel_u = gz_msg.velocity_up
+
+        # TODO: need a conversion from height_ellipsoid_mm to height_msl_mm
+
+        # TODO: consolidate conversions - perhaps use a @dataclass to collect
+        # Gazebo messages required for the conversion, where more than one
+        # message is required, or additional information needs to be supplied
+        # from configuration.
+        # Additional information
+        @dataclass
+        class NatSatAuxData:
+            sats_used: int = 0
+            pdop: float = float("nan")
+
+        msg = dronecan.uavcan.equipment.gnss.Fix2()
+
+        # assume that all timestamps are UTC
+        msg.timestamp.usec = usec
+        msg.gnss_timestamp.usec = usec
+        msg.gnss_time_standard = msg.GNSS_TIME_STANDARD_UTC
+        msg.num_leap_seconds = msg.NUM_LEAP_SECONDS_UNKNOWN
+
+        msg.longitude_deg_1e8 = int(lon_deg * 1e8)
+        msg.latitude_deg_1e8 = int(lat_deg * 1e8)
+        msg.height_ellipsoid_mm = int(alt_wgs84_m * 1e3)
+        msg.height_msl_mm = 0
+        msg.ned_velocity = [vel_n, vel_e, vel_u * -1.0]
+        msg.sats_used = 0
+        msg.status = msg.STATUS_3D_FIX
+        msg.mode = msg.MODE_DGPS
+        msg.sub_mode = msg.SUB_MODE_DGPS_OTHER
+        msg.covariance == []
+        msg.pdop = float("nan")
+        # TODO: provide a conversion to ECEF coordinates
+        # dronecan.uavcan.equipment.gnss.ECEFPositionVelocity()
+        # XYZ velocity in m/s
+        # msg.ecef_position_velocity.velocity_xyz = [0.0, 0.0, 0.0]
+        # XYZ-axis coordinates in mm
+        # msg.ecef_position_velocity.position_xyz_mm = [0, 0, 0]
+        # Position and velocity covariance in the ECEF frame. Units are m^2 for position,
+        # (m/s)^2 for velocity, and m^2/s for position/velocity.
+        # msg.ecef_position_velocity.covariance = []
+        return msg
+
+
 class DroneCANNode:
     def __init__(self, uri, node_id, rate, debug):
         self._uri = uri
@@ -181,11 +282,15 @@ class DroneCANNode:
         # TODO add methods to size
         self._rpm = [0, 0, 0, 0]
         self._magnetic_field_ga = [0]
+        self._gnss_fix2 = [None]
 
         self._lock = threading.Lock()
         self._node = None
+
         self._esc_pub = None
         self._mag_pub = None
+        self._gnss_fix2_pub = None
+
         self._task_thread = threading.Thread(target=self._run)
         self._task_thread.start()
 
@@ -209,7 +314,12 @@ class DroneCANNode:
         ) as self._node:
             # Setup to publish sensor measurement
             self._esc_pub = self._node.periodic(1.0 / rate, self._pub_esc_status)
-            self._mag_pub = self._node.periodic(1.0 / rate, self._pub_magnetic_field_strength)
+            self._mag_pub = self._node.periodic(
+                1.0 / rate, self._pub_magnetic_field_strength
+            )
+            self._gnss_fix2_pub = self._node.periodic(
+                1.0 / rate, self._pub_gnss_fix2
+            )
 
             # Set mode and health status
             self._node.mode = dronecan.uavcan.protocol.NodeStatus().MODE_OPERATIONAL
@@ -275,6 +385,18 @@ class DroneCANNode:
         if debug:
             print(dronecan.to_yaml(msg))
 
+    def _pub_gnss_fix2(self):
+        with self._lock:
+            debug = self._debug
+            gnss_fix2 = self._gnss_fix2
+
+        for msg in gnss_fix2:
+            if msg is not None:
+                self._node.broadcast(msg)
+
+            if debug:
+                print(dronecan.to_yaml(msg))
+
     def set_rpm(self, index, value):
         with self._lock:
             self._rpm[index] = value
@@ -283,7 +405,77 @@ class DroneCANNode:
         with self._lock:
             self._magnetic_field_ga[index] = value
 
-# converters
+    def set_gnss_fix2(self, index, value):
+        with self._lock:
+            self._gnss_fix2[index] = value
+
+def main():
+    # Command line args
+    parser = ArgumentParser(description="Publish DroneCAN ESC")
+    parser.add_argument("uri", default=None, type=str, help="CAN URI")
+    parser.add_argument("--node-id", default=100, type=int, help="CAN node ID")
+    parser.add_argument("--rate", type=float, default=50, help="broadcast rate Hz")
+    parser.add_argument("--debug", action="store_true", help="enable debug")
+    parser.add_argument("--world", default="iris_runway", type=str, help="world name")
+    parser.add_argument(
+        "--model", default="iris_with_gimbal", type=str, help="model name"
+    )
+    args = parser.parse_args()
+
+    # Subscribe to joint states
+    joint_states = JointStatesConverter(args.world, args.model, args.debug)
+
+    # Subscribe to magnetic field
+    magnetometer = MagnetometerConverter(
+        args.world,
+        args.model,
+        link="base_link",
+        sensor_name="magnetometer_sensor",
+        debug=args.debug,
+    )
+
+    # Subscribe to navsat
+    navsat = NavSatConverter(
+        args.world,
+        args.model,
+        link="base_link",
+        sensor_name="navsat_sensor",
+        debug=args.debug,
+    )
+
+    # DroneCAN node
+    dronecan_node = DroneCANNode(args.uri, args.node_id, args.rate, args.debug)
+
+    def rads_to_rpm(vel_rads):
+        if math.isnan(vel_rads):
+            return 0
+        else:
+            return vel_rads * 30.0 / math.pi
+
+    # Run the node
+    while True:
+        # ESC
+        rpm0 = int(rads_to_rpm(joint_states.joint_velocity("rotor_0_joint")))
+        rpm1 = int(rads_to_rpm(joint_states.joint_velocity("rotor_1_joint")))
+        rpm2 = int(rads_to_rpm(joint_states.joint_velocity("rotor_2_joint")))
+        rpm3 = int(rads_to_rpm(joint_states.joint_velocity("rotor_3_joint")))
+        dronecan_node.set_rpm(0, rpm0)
+        dronecan_node.set_rpm(1, rpm1)
+        dronecan_node.set_rpm(2, rpm2)
+        dronecan_node.set_rpm(3, rpm3)
+
+        # Magnetic field
+        mag0 = magnetometer.field_gauss()
+        dronecan_node.set_magnetic_field_ga(0, mag0)
+
+        # NavSat
+        gnss_fix2 = navsat.uavcan_equipment_gnss_fix2()
+        dronecan_node.set_gnss_fix2(0, gnss_fix2)
+
+        time.sleep(0.01)
+
+
+# Converter stubs
 def to_uavcan_equipment_air_data_StaticPressure():
     msg = dronecan.uavcan.equipment.air_data.StaticPressure()
     msg.static_pressure = 0.0
@@ -648,62 +840,6 @@ def test_converters():
 
     # Temperature
     print(to_uavcan_equipment_device_Temperature())
-
-
-def main():
-    # Command line args
-    parser = ArgumentParser(description="Publish DroneCAN ESC")
-    parser.add_argument("uri", default=None, type=str, help="CAN URI")
-    parser.add_argument("--node-id", default=100, type=int, help="CAN node ID")
-    parser.add_argument("--rate", type=float, default=50, help="broadcast rate Hz")
-    parser.add_argument("--debug", action="store_true", help="enable debug")
-    parser.add_argument("--world", default="iris_runway", type=str, help="world name")
-    parser.add_argument(
-        "--model", default="iris_with_gimbal", type=str, help="model name"
-    )
-    args = parser.parse_args()
-
-    # Subscribe to joint states
-    joint_states = JointStatesSubscriber(args.world, args.model, args.debug)
-
-    # Subscribe to magnetic field
-    magnetometer = MagnetometerSubscriber(
-        args.world,
-        args.model,
-        link="base_link",
-        sensor_name="magnetometer_sensor",
-        debug=args.debug,
-    )
-
-    # DroneCAN node
-    dronecan_node = DroneCANNode(args.uri, args.node_id, args.rate, args.debug)
-
-    def rads_to_rpm(vel_rads):
-        if math.isnan(vel_rads):
-            return 0
-        else:
-            return vel_rads * 30.0 / math.pi
-
-    # Run the node
-    while True:
-        # Joint RPM
-        rpm0 = int(rads_to_rpm(joint_states.joint_velocity("rotor_0_joint")))
-        rpm1 = int(rads_to_rpm(joint_states.joint_velocity("rotor_1_joint")))
-        rpm2 = int(rads_to_rpm(joint_states.joint_velocity("rotor_2_joint")))
-        rpm3 = int(rads_to_rpm(joint_states.joint_velocity("rotor_3_joint")))
-
-        dronecan_node.set_rpm(0, rpm0)
-        dronecan_node.set_rpm(1, rpm1)
-        dronecan_node.set_rpm(2, rpm2)
-        dronecan_node.set_rpm(3, rpm3)
-
-        # Magnetic field
-        mag0 = magnetometer.field_gauss()
-
-        dronecan_node.set_magnetic_field_ga(0, mag0)
-
-
-        time.sleep(0.01)
 
 
 def show_msg_types():
