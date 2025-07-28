@@ -1,6 +1,8 @@
 """
 Script to autotune the PIDs of a joint position controller using Ziegler-Nichols method
 
+Run this script
+
 
 Bridge topics from Gazebo to ROS 2
 
@@ -10,21 +12,64 @@ Bridge topics from Gazebo to ROS 2
 
 import math
 import numpy as np
+import os
 import time
 from typing import List, Tuple
 
-from gz.msgs11.clock_pb2 import Clock
-from gz.msgs11.double_pb2 import Double
-from gz.msgs11.model_pb2 import Model
-from gz.transport14 import Node
+from argparse import ArgumentParser
 
-from ardupilot_gazebo.scripts.pid_params import set_param, InvalidParameterError
+# from ardupilot_gazebo.scripts.pid_params import set_param, InvalidParameterError
+from pid_params import set_param, InvalidParameterError
+
+# World and model defaults
+DEFAULT_WORLD = "servo"
+DEFAULT_MODEL = "servo"
+DEFAULT_JOINT = "servo_arm_joint"
+DEFAULT_CONTROLLER = "JointPositionController"
+DEFAULT_TIMEOUT_MS = 1000
+
+# Supported Gazebo versions
+GZ_VERSION_GARDEN = "garden"
+GZ_VERSION_HARMONIC = "harmonic"
+GZ_VERSION_IONIC = "ionic"
+
+
+def gz_version():
+    """Return the environment variable GZ_VERSION if set, else default to 'harmonic'"""
+    return os.environ.get("GZ_VERSION", GZ_VERSION_HARMONIC)
+
+
+if gz_version() == GZ_VERSION_GARDEN:
+    from gz.msgs9.clock_pb2 import Clock
+    from gz.msgs9.double_pb2 import Double
+    from gz.msgs9.model_pb2 import Model
+elif gz_version() == GZ_VERSION_HARMONIC:
+    from gz.msgs10.clock_pb2 import Clock
+    from gz.msgs10.double_pb2 import Double
+    from gz.msgs10.model_pb2 import Model
+elif gz_version() == GZ_VERSION_IONIC:
+    from gz.msgs11.clock_pb2 import Clock
+    from gz.msgs11.double_pb2 import Double
+    from gz.msgs11.model_pb2 import Model
+
+
+# Importing gz.transport into the module global scope causes an odd
+# multiprocessing conflict with dronecan. This is a workaround.
+def gz_node():
+    if gz_version() == GZ_VERSION_GARDEN:
+        from gz.transport12 import Node
+    elif gz_version() == GZ_VERSION_HARMONIC:
+        from gz.transport13 import Node
+    elif gz_version() == GZ_VERSION_IONIC:
+        from gz.transport14 import Node
+
+    return Node()
 
 
 class ClockSubscriber:
     def __init__(self):
         super().__init__()
-        self.node = Node()
+        self.node = gz_node()
         self.last_clock = Clock()
         self.topic = "/clock"
 
@@ -51,7 +96,7 @@ class JointStateSubscriber:
         self._world_name = world_name
         self._model_name = model_name
 
-        self.node = Node()
+        self.node = gz_node()
         self.last_model = Model()
 
         self.subscribe(world_name, model_name)
@@ -93,7 +138,7 @@ class JointCommandPublisher:
     def __init__(self, topic: str):
         super().__init__()
         self.topic = topic
-        self.node = Node()
+        self.node = gz_node()
         self.pub = self.node.advertise(self.topic, Double)
 
     def set_position(self, position: float):
@@ -102,7 +147,9 @@ class JointCommandPublisher:
         self.pub.publish(msg)
 
 
-class JointAutotuner:
+class JointAutotunerGenerated:
+    """ML generated auto tuner (not effective)"""
+
     def __init__(
         self, world_name: str, model_name: str, joint_name: str, timeout_ms: int = 2000
     ):
@@ -114,7 +161,7 @@ class JointAutotuner:
         self.registry = f"/world/{world_name}"
         self.prefix = f"JointPositionController.{world_name}.{model_name}.{joint_name}."
 
-        self.node = Node()
+        self.node = gz_node()
         self.sample_time = 0.01  # 10ms
 
         self.joint_state_sub = JointStateSubscriber(world_name, model_name)
@@ -211,27 +258,44 @@ class JointAutotuner:
 def main():
     print("Running autotune")
 
-    # Configuration
-    world_name = "default"
-    model_name = "joint_position_controller_demo"
-    joint_name = "j1"
-    timeout_ms = 1000
+    # Command line args
+    parser = ArgumentParser(description="Get controller PIDs")
+    parser.add_argument("--world", default=DEFAULT_WORLD, type=str, help="world name")
+    parser.add_argument("--model", default=DEFAULT_MODEL, type=str, help="model name")
+    parser.add_argument("--joint", default=DEFAULT_JOINT, type=str, help="joint name")
+    parser.add_argument(
+        "--controller",
+        default=DEFAULT_CONTROLLER,
+        type=str,
+        help="joint controller system",
+    )
+    parser.add_argument(
+        "--timeout_ms", default=DEFAULT_TIMEOUT_MS, type=str, help="timeout (ms)"
+    )
+    args = parser.parse_args()
+
+    timeout_ms = args.timeout_ms
+
+    world_name = args.world
+    model_name = args.model
+    joint_name = args.joint
+    system_name = args.controller
+    joint_cmd_topic = f"/model/{args.model}" f"/joint/{args.joint}" f"/0/cmd_pos"
 
     # Create and run autotuner
     # tuner = JointAutotuner(world_name, model_name, joint_name, timeout_ms)
     # tuner.autotune()
 
     # Create subscribers
-    clock_sub = ClockSubscriber()
     joint_sub = JointStateSubscriber(world_name, model_name)
 
     # Create publishers
-    joint_cmd = JointCommandPublisher("/rotor_cmd")
+    joint_cmd = JointCommandPublisher(joint_cmd_topic)
 
     # Dwell period
     period = 2.0
-    limit_max = math.radians(60.0)
-    limit_min = -math.radians(60.0)
+    limit_max = math.radians(10.0)
+    limit_min = -math.radians(0.0)
 
     # control the twitch freqency
     start_time = time.monotonic()
@@ -240,7 +304,7 @@ def main():
     last_twitch_time = start_time
 
     # control the update rate
-    update_rate = 100.0
+    update_rate = 5.0
     update_period = 1.0 / update_rate
 
     pos_tgt = 0.0
