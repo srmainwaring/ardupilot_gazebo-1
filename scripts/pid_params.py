@@ -1,17 +1,107 @@
 """
 Use Gazebo Python services to set and get parameters
+
+Inspect parameters using services
+
+gz service -i -s /world/servo/list_parameters
+
+Service providers [Address, Request Message Type, Response Message Type]:
+  tcp://127.0.0.1:53842, gz.msgs.Empty, gz.msgs.ParameterDeclarations
+
+
+gz service --service /world/servo/list_parameters --reqtype gz.msgs.Empty --reptype gz.msgs.ParameterDeclarations --req ""
+
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.cmd_offset"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.cmd_min"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.cmd_max"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.i_max"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.i_gain"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.i_min"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.d_gain"
+  type: "gz_msgs.Double"
+}
+parameter_declarations {
+  name: "JointPositionController.servo.servo_arm_joint.p_gain"
+  type: "gz_msgs.Double"
+}
+
 """
+
+import os
+
+from argparse import ArgumentParser
 
 from google.protobuf import symbol_database
 from google.protobuf.any_pb2 import Any
 
-from gz.msgs11.double_pb2 import Double
-from gz.msgs11.parameter_pb2 import Parameter
-from gz.msgs11.parameter_error_pb2 import ParameterError
-from gz.msgs11.parameter_name_pb2 import ParameterName
-from gz.msgs11.parameter_value_pb2 import ParameterValue
+# World and model defaults
+DEFAULT_WORLD = "servo"
+DEFAULT_MODEL = "servo"
+DEFAULT_JOINT = "servo_arm_joint"
+DEFAULT_CONTROLLER = "JointPositionController"
+DEFAULT_TIMEOUT_MS = 1000
 
-from gz.transport14 import Node
+# Supported Gazebo versions
+GZ_VERSION_GARDEN = "garden"
+GZ_VERSION_HARMONIC = "harmonic"
+GZ_VERSION_IONIC = "ionic"
+
+
+def gz_version():
+    """Return the environment variable GZ_VERSION if set, else default to 'harmonic'"""
+    return os.environ.get("GZ_VERSION", GZ_VERSION_HARMONIC)
+
+
+if gz_version() == GZ_VERSION_GARDEN:
+    from gz.msgs9.double_pb2 import Double
+    from gz.msgs9.parameter_pb2 import Parameter
+    from gz.msgs9.parameter_error_pb2 import ParameterError
+    from gz.msgs9.parameter_name_pb2 import ParameterName
+    from gz.msgs9.parameter_value_pb2 import ParameterValue
+elif gz_version() == GZ_VERSION_HARMONIC:
+    from gz.msgs10.double_pb2 import Double
+    from gz.msgs10.parameter_pb2 import Parameter
+    from gz.msgs10.parameter_error_pb2 import ParameterError
+    from gz.msgs10.parameter_name_pb2 import ParameterName
+    from gz.msgs10.parameter_value_pb2 import ParameterValue
+elif gz_version() == GZ_VERSION_IONIC:
+    from gz.msgs11.double_pb2 import Double
+    from gz.msgs11.parameter_pb2 import Parameter
+    from gz.msgs11.parameter_error_pb2 import ParameterError
+    from gz.msgs11.parameter_name_pb2 import ParameterName
+    from gz.msgs11.parameter_value_pb2 import ParameterValue
+
+
+# Importing gz.transport into the module global scope causes an odd
+# multiprocessing conflict with dronecan. This is a workaround.
+def gz_node():
+    if gz_version() == GZ_VERSION_GARDEN:
+        from gz.transport12 import Node
+    elif gz_version() == GZ_VERSION_HARMONIC:
+        from gz.transport13 import Node
+    elif gz_version() == GZ_VERSION_IONIC:
+        from gz.transport14 import Node
+
+    return Node()
 
 
 class InvalidParameterError(Exception):
@@ -64,7 +154,7 @@ def is_any_empty(any_msg):
 
 def get_param(registry, name, timeout_ms):
     """Get a parameter from a registry"""
-    node = Node()
+    node = gz_node()
     service_name = f"{registry}/get_parameter"
     request = ParameterName()
     request.name = name
@@ -88,7 +178,7 @@ def get_param(registry, name, timeout_ms):
 
 def set_param(registry, name, value, timeout_ms):
     """Set a (double) parameter from a registry"""
-    node = Node()
+    node = gz_node()
     service_name = f"{registry}/set_parameter"
     double_msg = Double()
     double_msg.data = value
@@ -113,25 +203,32 @@ def set_param(registry, name, value, timeout_ms):
 
 def main():
     """Example demonstrating how to set and get dynamic parameters"""
-    timeout_ms = 1000
 
-    # world_name = "servo"
-    # model_name = "servo"
-    # joint_name = "servo_arm_joint"
-    # system_name = "ServoPlugin"
+    # Command line args
+    parser = ArgumentParser(description="Get controller PIDs")
+    parser.add_argument("--world", default=DEFAULT_WORLD, type=str, help="world name")
+    parser.add_argument("--model", default=DEFAULT_MODEL, type=str, help="model name")
+    parser.add_argument("--joint", default=DEFAULT_JOINT, type=str, help="joint name")
+    parser.add_argument(
+        "--controller",
+        default=DEFAULT_CONTROLLER,
+        type=str,
+        help="joint controller system",
+    )
+    parser.add_argument(
+        "--timeout_ms", default=DEFAULT_TIMEOUT_MS, type=str, help="timeout (ms)"
+    )
+    args = parser.parse_args()
 
-    # world_name = "default"
-    # model_name = "joint_position_controller_demo"
-    # joint_name = "j1"
-    # system_name = "JointPositionController"
+    timeout_ms = args.timeout_ms
 
-    world_name = "empty"
-    model_name = "helicopter_dual_transverse.rotor_head_ccw"
-    joint_name = "servo_arm_1_joint"
-    system_name = "JointPositionController"
+    world_name = args.world
+    model_name = args.model
+    joint_name = args.joint
+    system_name = args.controller
 
     registry = f"/world/{world_name}"
-    prefix = f"{system_name}.{world_name}.{model_name}.{joint_name}."
+    prefix = f"{system_name}.{model_name}.{joint_name}."
     names = [
         "p_gain",
         "i_gain",
@@ -145,7 +242,7 @@ def main():
 
     # get params
     print(f"Get PID params")
-    print(f"world_name: {world_name}")
+    print(f"system_name: {system_name}")
     print(f"model_name: {model_name}")
     print(f"joint_name: {joint_name}")
     for i, name in enumerate(names):
