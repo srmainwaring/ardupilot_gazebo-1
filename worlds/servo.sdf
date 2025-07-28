@@ -70,7 +70,7 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
         <linear>0.01</linear>
         <quadratic>0.001</quadratic>
       </attenuation>
-      <direction>-0.5 0.1 -0.9</direction>
+      <direction>0.5 0.1 -0.9</direction>
     </light>
 
     <model name="ground_plane">
@@ -102,30 +102,30 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
 
     <!-- servo -->
     <model name="servo">
-      <pose>0 0 0.005 0 0 0</pose>
+      <pose degrees="true">0 0 4.5 0 0 0</pose>
       <link name="base_link">
         <inertial>
-          <mass>120.0</mass>
+          <mass>100.0</mass>
           <inertia>
-            <ixx>2.501</ixx>
+            <ixx>808.3333333</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>2.501</iyy>
+            <iyy>683.3333333</iyy>
             <iyz>0</iyz>
-            <izz>5</izz>
+            <izz>141.6666667</izz>
           </inertia>
         </inertial>
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.5 0.5 0.01</size>
+              <size>1 4 9</size>
             </box>
           </geometry>
         </visual>
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.5 0.5 0.01</size>
+              <size>1 4 9</size>
             </box>
           </geometry>
         </collision>
@@ -136,22 +136,22 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
       </joint>
 
       <link name="servo_arm_link">
-        <pose>0 0 0.1 0 0 0</pose>
+        <pose relative_to="servo_arm_joint" degrees="true">0 0 1.8 0 0 0</pose>
         <inertial>
-          <mass>0.6</mass>
+          <mass>1</mass>
           <inertia>
-            <ixx>0.032</ixx>
+            <ixx>1.093333333</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.032</iyy>
+            <iyy>1.080833333</iyy>
             <iyz>0</iyz>
-            <izz>0.00012</izz>
+            <izz>0.014166667</izz>
           </inertia>
         </inertial>
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.25 0.1 0.05</size>
+              <size>0.1 0.4 3.6</size>
             </box>
           </geometry>
           <material>
@@ -162,18 +162,24 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.25 0.1 0.05</size>
+              <size>0.1 0.4 3.6</size>
             </box>
           </geometry>
         </collision>
       </link>
- 
       <joint name="servo_arm_joint" type="revolute">
-        <pose degrees="true">0 0 -0.5 0 0 0</pose>
+        <pose relative_to="base_link" degrees="true">-0.55 0 0 90 0 180</pose>
         <parent>base_link</parent>
         <child>servo_arm_link</child>
         <axis>
-          <xyz>0 0 1</xyz>
+          <xyz>1 0 0</xyz>
+          <limits>
+            <lower>-1.570796</lower>
+            <upper>1.570796</upper>
+          </limits>
+          <dynamics>
+            <damping>0.001</damping>
+          </dynamics>
         </axis>
       </joint>
 
@@ -182,9 +188,19 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
         filename="gz-sim-joint-state-publisher-system">
       </plugin>
 
-      <plugin name="ServoPlugin"
-        filename="ServoPlugin">
+      <plugin name="gz::sim::systems::JointPositionController"
+        filename="gz-sim-joint-position-controller-system">
         <joint_name>servo_arm_joint</joint_name>
+        <topic>/model/servo/joint/servo_arm_link/0/cmd_pos</topic>
+        <initial_position>0</initial_position>
+        <use_velocity_commands>0</use_velocity_commands>
+        <p_gain>10</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>1</i_max>
+        <i_min>-1</i_min>
+        <cmd_max>1000</cmd_max>
+        <cmd_min>-1000</cmd_min>
       </plugin>
 
     </model>
