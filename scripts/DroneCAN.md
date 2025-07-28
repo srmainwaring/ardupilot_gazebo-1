@@ -142,3 +142,11 @@ Subscribers
 - com_hobbywing_esc_StatusMsg2
 
 
+Running examples
+
+On MacBook Pro - set up as of 2025-07-20
+
+```bash
+ardupilot_gazebo % python ./scripts/dronecan_sensor.py mcast:0 --node-id 100 --rate 10 --world iris_runway --model iris_with_gimbal
+```
+
