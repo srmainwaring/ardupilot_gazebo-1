@@ -191,7 +191,7 @@ gz param -r /world/servo -s -n ServoPlugin..p_gain -t gz_msgs.Double -m "data: 1
       <plugin name="gz::sim::systems::JointPositionController"
         filename="gz-sim-joint-position-controller-system">
         <joint_name>servo_arm_joint</joint_name>
-        <topic>/model/servo/joint/servo_arm_link/0/cmd_pos</topic>
+        <topic>/model/servo/joint/servo_arm_joint/0/cmd_pos</topic>
         <initial_position>0</initial_position>
         <use_velocity_commands>0</use_velocity_commands>
         <p_gain>10</p_gain>
