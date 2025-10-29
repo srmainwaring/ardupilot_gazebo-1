@@ -16,6 +16,7 @@ from dataclasses import dataclass
 GZ_VERSION_GARDEN = "garden"
 GZ_VERSION_HARMONIC = "harmonic"
 GZ_VERSION_IONIC = "ionic"
+GZ_VERSION_JETTY = "jetty"
 
 
 def gz_version():
@@ -47,6 +48,14 @@ elif gz_version() == GZ_VERSION_IONIC:
     from gz.msgs11.magnetometer_pb2 import Magnetometer
     from gz.msgs11.model_pb2 import Model
     from gz.msgs11.navsat_pb2 import NavSat
+elif gz_version() == GZ_VERSION_JETTY:
+    from gz.msgs.air_speed_pb2 import AirSpeed
+    from gz.msgs.altimeter_pb2 import Altimeter
+    from gz.msgs.battery_state_pb2 import BatteryState
+    from gz.msgs.fluid_pressure_pb2 import FluidPressure
+    from gz.msgs.magnetometer_pb2 import Magnetometer
+    from gz.msgs.model_pb2 import Model
+    from gz.msgs.navsat_pb2 import NavSat
 
 
 # Importing gz.transport into the module global scope causes an odd
@@ -58,6 +67,8 @@ def gz_node():
         from gz.transport13 import Node
     elif gz_version() == GZ_VERSION_IONIC:
         from gz.transport14 import Node
+    elif gz_version() == GZ_VERSION_JETTY:
+        from gz.transport import Node
 
     return Node()
 
