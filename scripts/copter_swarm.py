@@ -1,0 +1,226 @@
+"""
+Launch multiple copters in Gazebo
+
+Assume Gazebo Jetty (no namespace required for the imports)
+"""
+
+import copy
+import math
+import os
+
+from argparse import ArgumentParser
+from pathlib import Path
+from transforms3d import euler
+
+GZ_VERSION_GARDEN = "garden"
+GZ_VERSION_HARMONIC = "harmonic"
+GZ_VERSION_IONIC = "ionic"
+GZ_VERSION_JETTY = "jetty"
+
+# TODO: hardcoded path - need to search the GZ_RESOURCE_PATH 
+GZ_RESOURCE_PATH = "/Users/rhys/Code/ros2/jazzy/ros2-ardupilot/src/ardupilot_gazebo/models"
+
+# Index convention for transforms3d quaternions
+QUAT_IDX_W = 0
+QUAT_IDX_X = 1
+QUAT_IDX_Y = 2
+QUAT_IDX_Z = 3
+
+
+def gz_version():
+    """Return the environment variable GZ_VERSION if set, else default to 'harmonic'"""
+    return os.environ.get("GZ_VERSION", GZ_VERSION_HARMONIC)
+
+
+if gz_version() == GZ_VERSION_JETTY:
+    from gz.msgs.boolean_pb2 import Boolean
+    from gz.msgs.entity_factory_pb2 import EntityFactory
+    from gz.msgs.entity_factory_v_pb2 import EntityFactory_V
+
+
+# Importing gz.transport into the module global scope causes an odd
+# multiprocessing conflict with dronecan. This is a workaround.
+def gz_node():
+    if gz_version() == GZ_VERSION_JETTY:
+        from gz.transport import Node
+
+    return Node()
+
+class GazeboModelFactory:
+    def __init__(self, args):
+        # Configuration
+        self.world_name = args.world
+        self.model_name = args.model
+
+        # The sysid and instance may not be coincident
+        self.first_sysid = args.first_sysid
+        self.first_instance = args.first_instance
+
+        # Layout
+        self.row_spacing = args.row_spacing
+        self.col_spacing = args.col_spacing
+        self.z_offset = args.z_offset
+        self.row_count = args.row_count
+        self.col_count = args.col_count
+
+        # Service call timeout
+        self.timeout = args.timeout
+
+        # TODO: hardcoded path - need to search the GZ_RESOURCE_PATH 
+        # Load the sdf file
+        self.path_to_models = Path(GZ_RESOURCE_PATH)
+
+    def create_models(self):
+        # Configuration
+        world_name = self.world_name
+        model_name = self.model_name
+        first_sysid = self.first_sysid
+        first_instance = self.first_instance
+        row_spacing = self.row_spacing
+        col_spacing = self.col_spacing
+        z_offset = self.z_offset
+        row_count = self.row_count
+        col_count = self.col_count
+        timeout = self.timeout
+        path_to_models = self.path_to_models
+
+        model_sdf = None
+        with open(path_to_models / model_name / "model.sdf", mode="r") as f:
+            model_sdf = f.read()
+        # print(model_sdf)
+
+        # Set up the service call
+        node = gz_node()
+        service_name = f"/world/{world_name}/create_multiple"
+
+        # Create all models in a single request
+        request = EntityFactory_V()
+
+        # Set global orientation and initial sysid and instance
+        q = euler.euler2quat(math.radians(0), math.radians(0), math.radians(90))
+        sysid = first_sysid
+        instance = first_instance
+        for row in range(row_count):
+            for col in range(col_count):
+                # Replace address and port details in sdf
+                fdm_addr = "127.0.0.1"
+                fdm_port_in = 9002 + 10 * instance
+
+                instance_model_sdf = model_sdf.replace(
+                    f"<fdm_addr>127.0.0.1</fdm_addr>", f"<fdm_addr>{fdm_addr}</fdm_addr>"
+                )
+
+                instance_model_sdf = instance_model_sdf.replace(
+                    f"<fdm_port_in>9002</fdm_port_in>",
+                    f"<fdm_port_in>{fdm_port_in}</fdm_port_in>",
+                )
+
+                # Create entity
+                entity_factory = EntityFactory()
+                entity_factory.sdf = instance_model_sdf
+                entity_factory.pose.position.x = row_spacing * row
+                entity_factory.pose.position.y = col_spacing * col
+                entity_factory.pose.position.z = z_offset
+
+                entity_factory.pose.orientation.w = q[QUAT_IDX_W]
+                entity_factory.pose.orientation.x = q[QUAT_IDX_X]
+                entity_factory.pose.orientation.y = q[QUAT_IDX_Y]
+                entity_factory.pose.orientation.z = q[QUAT_IDX_Z]
+
+                entity_factory.name = f"{model_name}_{sysid}"
+                entity_factory.allow_renaming = False
+
+                # Append to request
+                request.data.append(entity_factory)
+
+                sysid += 1
+                instance += 1
+
+        response = Boolean()
+
+        print(f"Creating models: {model_name} x {row_count * col_count}")
+        result, response = node.request(
+            service_name, request, EntityFactory_V, Boolean, timeout
+        )
+        print(f"Creating models: result: {result}, response: {response.data}")
+
+
+class SitlLauncher:
+    def __init__(self):
+        pass
+    
+    def launch(self):
+        pass
+
+
+def main():
+    # Command line args
+    parser = ArgumentParser(description="Launch Copter Swarm")
+    parser.add_argument("--world", default="runway", type=str, help="world name")
+    parser.add_argument(
+        "--model", default="iris_with_ardupilot", type=str, help="model name"
+    )
+
+    parser.add_argument("--row-count", default="1", type=int, help="number of rows")
+    parser.add_argument("--col-count", default="1", type=int, help="number of columns")
+    parser.add_argument(
+        "--row-spacing",
+        default="1.0",
+        type=float,
+        help="spacing between copters along a row",
+    )
+    parser.add_argument(
+        "--col-spacing",
+        default="1.0",
+        type=float,
+        help="spacing between copters along a column",
+    )
+    parser.add_argument(
+        "--z-offset",
+        default="1.0",
+        type=float,
+        help="spacing between copters along a column",
+    )
+    parser.add_argument(
+        "--timeout", default="5000", type=int, help="timeout for service calls"
+    )
+    parser.add_argument(
+        "--first-sysid", default="1", type=int, help="sysid of the first copter"
+    )
+    parser.add_argument(
+        "--first-instance",
+        default="0",
+        type=int,
+        help="instance index of the first copter",
+    )
+
+    args = parser.parse_args()
+
+    # ======================================================================= #
+    # Create copter models
+
+    gz_model_factory =  GazeboModelFactory(args)
+
+    # overrides for testing
+    gz_model_factory.row_count = 2
+    gz_model_factory.col_count = 2
+
+    gz_model_factory.create_models()
+
+    # TODO
+    # Add levels
+    # Add transparent cells / tiles to highlight level boundaries
+    # Add performers
+
+    # ======================================================================= #
+    # Launch SITL
+
+    # Single session to start...
+    sitl_launcher = SitlLauncher()
+    sitl_launcher.launch()
+
+    # ======================================================================= #
+
+
+if __name__ == "__main__":
+    main()
