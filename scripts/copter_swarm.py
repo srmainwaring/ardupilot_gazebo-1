@@ -104,8 +104,8 @@ class GazeboModelFactory:
         q = euler.euler2quat(math.radians(0), math.radians(0), math.radians(90))
         sysid = first_sysid
         instance = first_instance
-        for xi in range(x_count):
-            for yi in range(y_count):
+        for yi in range(y_count):
+            for xi in range(x_count):
                 # Replace address and port details in sdf
                 fdm_addr = "127.0.0.1"
                 fdm_port_in = 9002 + 10 * instance
@@ -178,8 +178,8 @@ class GazeboModelFactory:
         request = StringMsg()
 
         sysid = first_sysid
-        for xi in range(x_count):
-            for yi in range(y_count):
+        for yi in range(y_count):
+            for xi in range(x_count):
                 entity_name = f"{model_name}_{sysid}"
                 print(f"Creating performer: {entity_name} at {xi}, {yi}")
 
