@@ -129,29 +129,155 @@
       <pose degrees="true">-29 545 0 0 0 363</pose>
     </include>
 
-    <!-- <include>
+    <!-- level tiles -->
+    <include>
       <uri>model://level_tile</uri>
-      <pose degrees="true">0 0 0 0 0 0</pose>
-    </include> -->
+      <pose degrees="true">0 0 0.01 0 0 90</pose>
+      <name>level_tile_1</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">20 0 0.01 0 0 90</pose>
+      <name>level_tile_2</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">40 0 0.01 0 0 90</pose>
+      <name>level_tile_3</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">60 0 0.01 0 0 90</pose>
+      <name>level_tile_4</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">80 0 0.01 0 0 90</pose>
+      <name>level_tile_5</name>
+    </include>
 
-    <!-- <include>
-      <uri>model://iris_with_ardupilot</uri>
-      <pose degrees="true">0 0 0 0 0 90</pose>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">0 20 0.01 0 0 90</pose>
+      <name>level_tile_6</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">20 20 0.01 0 0 90</pose>
+      <name>level_tile_7</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">40 20 0.01 0 0 90</pose>
+      <name>level_tile_8</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">60 20 0.01 0 0 90</pose>
+      <name>level_tile_9</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">80 20 0.01 0 0 90</pose>
+      <name>level_tile_10</name>
+    </include>
+
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">0 40 0.01 0 0 90</pose>
+      <name>level_tile_11</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">20 40 0.01 0 0 90</pose>
+      <name>level_tile_12</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">40 40 0.01 0 0 90</pose>
+      <name>level_tile_13</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">60 40 0.01 0 0 90</pose>
+      <name>level_tile_14</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">80 40 0.01 0 0 90</pose>
+      <name>level_tile_15</name>
+    </include>
+
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">0 60 0.01 0 0 90</pose>
+      <name>level_tile_16</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">20 60 0.01 0 0 90</pose>
+      <name>level_tile_17</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">40 60 0.01 0 0 90</pose>
+      <name>level_tile_18</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">60 60 0.01 0 0 90</pose>
+      <name>level_tile_19</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">80 60 0.01 0 0 90</pose>
+      <name>level_tile_20</name>
+    </include>
+
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">0 80 0.01 0 0 90</pose>
+      <name>level_tile_21</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">20 80 0.01 0 0 90</pose>
+      <name>level_tile_22</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">40 80 0.01 0 0 90</pose>
+      <name>level_tile_23</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">60 80 0.01 0 0 90</pose>
+      <name>level_tile_24</name>
+    </include>
+    <include>
+      <uri>model://level_tile</uri>
+      <pose degrees="true">80 80 0.01 0 0 90</pose>
+      <name>level_tile_25</name>
+    </include>
+
+    <include>
+      <uri>model://iris_with_ardupilot_1</uri>
+      <pose degrees="true">0 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_1</name>
     </include>
-    <include>
-      <uri>model://iris_with_ardupilot</uri>
-      <pose degrees="true">10 0 0 0 0 90</pose>
+    <!-- <include>
+      <uri>model://iris_with_ardupilot_2</uri>
+      <pose degrees="true">10 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_2</name>
-    </include>
-    <include>
-      <uri>model://iris_with_ardupilot</uri>
-      <pose degrees="true">20 0 0 0 0 90</pose>
+    </include> -->
+    <!-- <include>
+      <uri>model://iris_with_ardupilot_3</uri>
+      <pose degrees="true">20 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_3</name>
-    </include>
-    <include>
-      <uri>model://iris_with_ardupilot</uri>
-      <pose degrees="true">30 0 0 0 0 90</pose>
+    </include> -->
+    <!-- <include>
+      <uri>model://iris_with_ardupilot_4</uri>
+      <pose degrees="true">30 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_4</name>
     </include> -->
 
@@ -159,7 +285,7 @@
     <plugin name="gz::sim" filename="dummy">
 
       <!-- performers may be added at runtime -->
-      <!-- <performer name="perf_iris_with_ardupilot_1">
+      <performer name="perf_iris_with_ardupilot_1">
         <ref>iris_with_ardupilot_1</ref>
         <geometry>
           <box>
@@ -167,23 +293,23 @@
           </box>
         </geometry>
       </performer>
-      <performer name="perf_iris_with_ardupilot_2">
+      <!-- <performer name="perf_iris_with_ardupilot_2">
         <ref>iris_with_ardupilot_2</ref>
         <geometry>
           <box>
             <size>2 2 2</size>
           </box>
         </geometry>
-      </performer>
-      <performer name="perf_iris_with_ardupilot_3">
+      </performer> -->
+      <!-- <performer name="perf_iris_with_ardupilot_3">
         <ref>iris_with_ardupilot_3</ref>
         <geometry>
           <box>
             <size>2 2 2</size>
           </box>
         </geometry>
-      </performer>
-      <performer name="perf_iris_with_ardupilot_4">
+      </performer> -->
+      <!-- <performer name="perf_iris_with_ardupilot_4">
         <ref>iris_with_ardupilot_4</ref>
         <geometry>
           <box>
