@@ -17,8 +17,10 @@ GZ_VERSION_HARMONIC = "harmonic"
 GZ_VERSION_IONIC = "ionic"
 GZ_VERSION_JETTY = "jetty"
 
-# TODO: hardcoded path - need to search the GZ_RESOURCE_PATH 
-GZ_RESOURCE_PATH = "/Users/rhys/Code/ros2/jazzy/ros2-ardupilot/src/ardupilot_gazebo/models"
+# TODO: hardcoded path - need to search the GZ_RESOURCE_PATH
+GZ_RESOURCE_PATH = (
+    "/Users/rhys/Code/ros2/jazzy/ros2-ardupilot/src/ardupilot_gazebo/models"
+)
 
 # Index convention for transforms3d quaternions
 QUAT_IDX_W = 0
@@ -36,6 +38,7 @@ if gz_version() == GZ_VERSION_JETTY:
     from gz.msgs.boolean_pb2 import Boolean
     from gz.msgs.entity_factory_pb2 import EntityFactory
     from gz.msgs.entity_factory_v_pb2 import EntityFactory_V
+    from gz.msgs.stringmsg_pb2 import StringMsg
 
 
 # Importing gz.transport into the module global scope causes an odd
@@ -45,6 +48,7 @@ def gz_node():
         from gz.transport import Node
 
     return Node()
+
 
 class GazeboModelFactory:
     def __init__(self, args):
@@ -57,16 +61,16 @@ class GazeboModelFactory:
         self.first_instance = args.first_instance
 
         # Layout
-        self.row_spacing = args.row_spacing
-        self.col_spacing = args.col_spacing
+        self.x_offset = args.x_offset
+        self.y_offset = args.y_offset
         self.z_offset = args.z_offset
-        self.row_count = args.row_count
-        self.col_count = args.col_count
+        self.x_count = args.x_count
+        self.y_count = args.y_count
 
         # Service call timeout
         self.timeout = args.timeout
 
-        # TODO: hardcoded path - need to search the GZ_RESOURCE_PATH 
+        # TODO: hardcoded path - need to search the GZ_RESOURCE_PATH
         # Load the sdf file
         self.path_to_models = Path(GZ_RESOURCE_PATH)
 
@@ -76,11 +80,11 @@ class GazeboModelFactory:
         model_name = self.model_name
         first_sysid = self.first_sysid
         first_instance = self.first_instance
-        row_spacing = self.row_spacing
-        col_spacing = self.col_spacing
+        x_offset = self.x_offset
+        y_offset = self.y_offset
         z_offset = self.z_offset
-        row_count = self.row_count
-        col_count = self.col_count
+        x_count = self.x_count
+        y_count = self.y_count
         timeout = self.timeout
         path_to_models = self.path_to_models
 
@@ -100,14 +104,15 @@ class GazeboModelFactory:
         q = euler.euler2quat(math.radians(0), math.radians(0), math.radians(90))
         sysid = first_sysid
         instance = first_instance
-        for row in range(row_count):
-            for col in range(col_count):
+        for xi in range(x_count):
+            for yi in range(y_count):
                 # Replace address and port details in sdf
                 fdm_addr = "127.0.0.1"
                 fdm_port_in = 9002 + 10 * instance
 
                 instance_model_sdf = model_sdf.replace(
-                    f"<fdm_addr>127.0.0.1</fdm_addr>", f"<fdm_addr>{fdm_addr}</fdm_addr>"
+                    f"<fdm_addr>127.0.0.1</fdm_addr>",
+                    f"<fdm_addr>{fdm_addr}</fdm_addr>",
                 )
 
                 instance_model_sdf = instance_model_sdf.replace(
@@ -118,8 +123,8 @@ class GazeboModelFactory:
                 # Create entity
                 entity_factory = EntityFactory()
                 entity_factory.sdf = instance_model_sdf
-                entity_factory.pose.position.x = row_spacing * row
-                entity_factory.pose.position.y = col_spacing * col
+                entity_factory.pose.position.x = x_offset * xi
+                entity_factory.pose.position.y = y_offset * yi
                 entity_factory.pose.position.z = z_offset
 
                 entity_factory.pose.orientation.w = q[QUAT_IDX_W]
@@ -138,17 +143,59 @@ class GazeboModelFactory:
 
         response = Boolean()
 
-        print(f"Creating models: {model_name} x {row_count * col_count}")
+        print(f"Creating models: {model_name} x {x_count * y_count}")
         result, response = node.request(
             service_name, request, EntityFactory_V, Boolean, timeout
         )
         print(f"Creating models: result: {result}, response: {response.data}")
 
+    def create_performers(self):
+        # gz service
+        #     -s /world/levels/level/set_performer
+        #     --reqtype gz.msgs.StringMsg
+        #     --reptype gz.msgs.Boolean
+        #     --timeout 2000
+        #     --req 'data: "vehicle_blue"'
+
+        # Configuration
+        world_name = self.world_name
+        model_name = self.model_name
+        first_sysid = self.first_sysid
+        first_instance = self.first_instance
+        x_offset = self.x_offset
+        y_offset = self.y_offset
+        z_offset = self.z_offset
+        x_count = self.x_count
+        y_count = self.y_count
+        timeout = self.timeout
+        path_to_models = self.path_to_models
+
+        # Set up the service call
+        node = gz_node()
+        service_name = f"/world/{world_name}/level/set_performer"
+
+        # Create all models in a single request
+        request = StringMsg()
+
+        sysid = first_sysid
+        for xi in range(x_count):
+            for yi in range(y_count):
+                entity_name = f"{model_name}_{sysid}"
+                print(f"Creating performer: {entity_name} at {xi}, {yi}")
+
+                request.data = entity_name
+                response = Boolean()
+                result, response = node.request(
+                    service_name, request, StringMsg, Boolean, timeout
+                )
+                print(f"Creating performer: result: {result}, response: {response.data}")
+                sysid += 1
+
 
 class SitlLauncher:
     def __init__(self):
         pass
-    
+
     def launch(self):
         pass
 
@@ -161,25 +208,29 @@ def main():
         "--model", default="iris_with_ardupilot", type=str, help="model name"
     )
 
-    parser.add_argument("--row-count", default="1", type=int, help="number of rows")
-    parser.add_argument("--col-count", default="1", type=int, help="number of columns")
     parser.add_argument(
-        "--row-spacing",
-        default="1.0",
-        type=float,
-        help="spacing between copters along a row",
+        "--x-count", default="1", type=int, help="number of models along the x-axis"
     )
     parser.add_argument(
-        "--col-spacing",
+        "--y-count", default="1", type=int, help="number of models along the y-axis"
+    )
+    parser.add_argument(
+        "--x-offset",
         default="1.0",
         type=float,
-        help="spacing between copters along a column",
+        help="offset between models along the x-axis",
+    )
+    parser.add_argument(
+        "--y-offset",
+        default="1.0",
+        type=float,
+        help="offset between models along the y-axis",
     )
     parser.add_argument(
         "--z-offset",
         default="1.0",
         type=float,
-        help="spacing between copters along a column",
+        help="offset of the model from the ground",
     )
     parser.add_argument(
         "--timeout", default="5000", type=int, help="timeout for service calls"
@@ -199,18 +250,24 @@ def main():
     # ======================================================================= #
     # Create copter models
 
-    gz_model_factory =  GazeboModelFactory(args)
-
-    # overrides for testing
-    gz_model_factory.row_count = 2
-    gz_model_factory.col_count = 2
-
+    gz_model_factory = GazeboModelFactory(args)
     gz_model_factory.create_models()
+
+    # TODO: check if we are using levels
+    gz_model_factory.create_performers()
 
     # TODO
     # Add levels
     # Add transparent cells / tiles to highlight level boundaries
-    # Add performers
+    gz_level_factory = GazeboModelFactory(args)
+    gz_level_factory.model_name = "level_tile"
+
+    gz_level_factory.x_count = 5
+    gz_level_factory.y_count = 5
+    gz_level_factory.x_offset = 20
+    gz_level_factory.y_offset = 20
+    gz_level_factory.z_offset = 0.01
+    gz_level_factory.create_models()
 
     # ======================================================================= #
     # Launch SITL
