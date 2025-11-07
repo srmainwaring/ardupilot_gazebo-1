@@ -767,7 +767,7 @@
       filename="gz-sim-joint-controller-system">
       <joint_name>iris_with_standoffs::rotor_0_joint</joint_name>
       <use_force_commands>1</use_force_commands>
-      <topic>/model/iris_with_standoffs/joint/rotor_0_joint/cmd_vel</topic>
+      <topic>/model/iris_with_ardupilot/joint/rotor_0_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
@@ -779,7 +779,7 @@
       filename="gz-sim-joint-controller-system">
       <joint_name>iris_with_standoffs::rotor_1_joint</joint_name>
       <use_force_commands>1</use_force_commands>
-      <topic>/model/iris_with_standoffs/joint/rotor_1_joint/cmd_vel</topic>
+      <topic>/model/iris_with_ardupilot/joint/rotor_1_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
@@ -791,7 +791,7 @@
       filename="gz-sim-joint-controller-system">
       <joint_name>iris_with_standoffs::rotor_2_joint</joint_name>
       <use_force_commands>1</use_force_commands>
-      <topic>/model/iris_with_standoffs/joint/rotor_2_joint/cmd_vel</topic>
+      <topic>/model/iris_with_ardupilot/joint/rotor_2_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
@@ -803,7 +803,7 @@
       filename="gz-sim-joint-controller-system">
       <joint_name>iris_with_standoffs::rotor_3_joint</joint_name>
       <use_force_commands>1</use_force_commands>
-      <topic>/model/iris_with_standoffs/joint/rotor_3_joint/cmd_vel</topic>
+      <topic>/model/iris_with_ardupilot/joint/rotor_3_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
@@ -844,7 +844,7 @@
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_standoffs/joint/rotor_0_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot/joint/rotor_0_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="1">
@@ -855,7 +855,7 @@
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_standoffs/joint/rotor_1_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot/joint/rotor_1_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="2">
@@ -866,7 +866,7 @@
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_standoffs/joint/rotor_2_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot/joint/rotor_2_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="3">
@@ -877,7 +877,7 @@
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_standoffs/joint/rotor_3_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot/joint/rotor_3_joint/cmd_vel</cmd_topic>
       </control>
 
     </plugin>
