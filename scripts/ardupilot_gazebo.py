@@ -48,6 +48,7 @@ def gz_version():
 if gz_version() == GZ_VERSION_JETTY:
     from gz.msgs.boolean_pb2 import Boolean
     from gz.msgs.clock_pb2 import Clock
+    from gz.msgs.double_pb2 import Double
     from gz.msgs.entity_factory_pb2 import EntityFactory
     from gz.msgs.entity_factory_v_pb2 import EntityFactory_V
     from gz.msgs.imu_pb2 import IMU
@@ -73,7 +74,7 @@ class Control:
     use_force: bool = True
     joint_name: str = ""
     cmd_topic: str = ""
-    multipler: float = 1.0
+    multiplier: float = 1.0
     offset: float = 0.0
     servo_min: float = 1000.0
     servo_max: float = 2000.0
@@ -165,8 +166,8 @@ class ArduPilotGazeboBridge:
         global TIME_STEP
 
         while True:
-            time.sleep(0.1)
-            continue
+            # time.sleep(0.1)
+            # continue
 
             # pre-update
             # TODO
@@ -212,6 +213,9 @@ class ArduPilotGazeboBridge:
                 print(f"Connected to {address}")
 
             self.frame_count += 1
+
+            #
+            self._send_commands()
 
             # post-update
             # TODO
@@ -266,8 +270,8 @@ class ArduPilotGazeboBridge:
         control.type = "COMMAND"
         control.use_force = True
         control.joint_name = "iris_with_standoffs::rotor_0_joint"
-        control.cmd_topic = "/model/iris_with_ardupilot/joint/rotor_0_joint/cmd_vel"
-        control.multipler = 838
+        control.cmd_topic = f"/model/iris_with_ardupilot_1/joint/rotor_0_joint/cmd_vel"
+        control.multiplier = 838
         control.offset = 0.0
         control.servo_max = 2000
         control.servo_min = 1000
@@ -278,8 +282,8 @@ class ArduPilotGazeboBridge:
         control.type = "COMMAND"
         control.use_force = True
         control.joint_name = "iris_with_standoffs::rotor_1_joint"
-        control.cmd_topic = "/model/iris_with_ardupilot/joint/rotor_1_joint/cmd_vel"
-        control.multipler = 838
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_1_joint/cmd_vel"
+        control.multiplier = 838
         control.offset = 0.0
         control.servo_max = 2000
         control.servo_min = 1000
@@ -290,8 +294,8 @@ class ArduPilotGazeboBridge:
         control.type = "COMMAND"
         control.use_force = True
         control.joint_name = "iris_with_standoffs::rotor_2_joint"
-        control.cmd_topic = "/model/iris_with_ardupilot/joint/rotor_2_joint/cmd_vel"
-        control.multipler = -838
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_2_joint/cmd_vel"
+        control.multiplier = -838
         control.offset = 0.0
         control.servo_max = 2000
         control.servo_min = 1000
@@ -302,8 +306,8 @@ class ArduPilotGazeboBridge:
         control.type = "COMMAND"
         control.use_force = True
         control.joint_name = "iris_with_standoffs::rotor_3_joint"
-        control.cmd_topic = "/model/iris_with_ardupilot/joint/rotor_3_joint/cmd_vel"
-        control.multipler = -838
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_3_joint/cmd_vel"
+        control.multiplier = -838
         control.offset = 0.0
         control.servo_max = 2000
         control.servo_min = 1000
@@ -312,26 +316,22 @@ class ArduPilotGazeboBridge:
     def _init_pubsub(self):
         # gz.msgs.Clock
         # /world/iris_runway/clock
-        self.clock_topic = (
-            f"/world/{self.world_name}/clock"
-        )
+        self.clock_topic = f"/world/{self.world_name}/clock"
         self.clock_sub = self.node.subscribe(Clock, self.clock_topic, self._clock_cb)
         print(f"Subscribing to Clock on: {self.clock_topic}")
 
         # gz.msgs.Pose_V
         # /world/iris_runway/dynamic_pose/info
-        self.pose_info_topic = (
-            f"/world/{self.world_name}/dynamic_pose/info"
+        self.pose_info_topic = f"/world/{self.world_name}/dynamic_pose/info"
+        self.pose_info_sub = self.node.subscribe(
+            Pose_V, self.pose_info_topic, self._pose_info_cb
         )
-        self.pose_info_sub = self.node.subscribe(Pose_V, self.pose_info_topic, self._pose_info_cb)
         print(f"Subscribing to Pose_V on: {self.pose_info_topic}")
 
         # gz.msgs.Model
         # /world/iris_runway/model/iris_with_ardupilot_1/joint_state
         self.model_topic = (
-            f"/world/{self.world_name}"
-            f"/model/{self.model_name}"
-            f"/joint_state"
+            f"/world/{self.world_name}" f"/model/{self.model_name}" f"/joint_state"
         )
         self.model_sub = self.node.subscribe(Model, self.model_topic, self._model_cb)
         print(f"Subscribing to Model on: {self.model_topic}")
@@ -353,6 +353,14 @@ class ArduPilotGazeboBridge:
         self.imu_sub = self.node.subscribe(IMU, self.imu_topic, self._imu_cb)
         print(f"Subscribing to IMU on: {self.imu_topic}")
 
+        # commands
+        for control in self.controls:
+            self.command_pubs.append(self.node.advertise(control.cmd_topic, Double))
+            print(
+                f"Advertising command for channel {control.channel} "
+                f"on {control.cmd_topic}"
+            )
+
     def _init_sockets(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.address, self.port))
@@ -365,6 +373,30 @@ class ArduPilotGazeboBridge:
         # except Exception:
         #     time.sleep(0.01)
         #     continue
+
+    def _send_commands(self):
+        for i in range(len(self.controls)):
+            control = self.controls[i]
+            pub = self.command_pubs[i]
+            pwm_i = self.pwm[i]
+            pwm_max = control.servo_max
+            pwm_min = control.servo_min
+            multiplier = control.multiplier
+            offset = control.offset
+
+            # FC initialising
+            if pwm_i == 0:
+                continue
+
+            normalised_cmd = (pwm_i - pwm_min) / (pwm_max - pwm_min)
+            normalised_cmd = max(min(normalised_cmd, 1.0), 0.0)
+            cmd = multiplier * (normalised_cmd + offset)
+
+            cmd_msg = Double()
+            cmd_msg.data = cmd
+            pub.publish(cmd_msg)
+            # /model/iris_with_ardupilot_1/joint/rotor_3_joint/cmd_vel
+            print(f"Publish command {cmd_msg.data} for channel: {i}")
 
     def _create_state_json(self):
         pass
@@ -400,7 +432,6 @@ class ArduPilotGazeboBridge:
         with self.model_lock:
             self.model_msg = copy.deepcopy(msg)
             # print(self.model_msg)
-
 
     def _imu_cb(self, msg):
         with self.imu_lock:
