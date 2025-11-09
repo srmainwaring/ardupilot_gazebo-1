@@ -260,6 +260,7 @@
       <name>level_tile_25</name>
     </include>
 
+    <!-- copters -->
     <include>
       <uri>model://iris_with_ardupilot_1</uri>
       <pose degrees="true">0 0 0.2 0 0 90</pose>
@@ -281,7 +282,7 @@
       <name>iris_with_ardupilot_4</name>
     </include> -->
 
-    <!-- levels -->
+    <!-- level plugin -->
     <plugin name="gz::sim" filename="dummy">
 
       <!-- performers may be added at runtime -->
@@ -318,7 +319,7 @@
         </geometry>
       </performer> -->
 
-      <!-- levels cannot be added at runtime -->
+      <!-- levels cannot be added at runtime (no service) -->
       <level name="level1">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
