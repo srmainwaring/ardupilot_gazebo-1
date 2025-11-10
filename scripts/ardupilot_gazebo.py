@@ -47,8 +47,9 @@ def gz_version():
 
 
 if gz_version() == GZ_VERSION_JETTY:
-    from gz.math import Vector3d
     from gz.math import Pose3d
+    from gz.math import Quaterniond
+    from gz.math import Vector3d
     from gz.msgs.boolean_pb2 import Boolean
     from gz.msgs.clock_pb2 import Clock
     from gz.msgs.double_pb2 import Double
@@ -58,6 +59,8 @@ if gz_version() == GZ_VERSION_JETTY:
     from gz.msgs.model_pb2 import Model
     from gz.msgs.pose_pb2 import Pose
     from gz.msgs.pose_v_pb2 import Pose_V
+
+    # from gz.msgs.quaternion_pb2 import Quaternion
     from gz.msgs.stringmsg_pb2 import StringMsg
 
 
@@ -434,11 +437,21 @@ class ArduPilotGazeboBridge:
                 self.imu_msg.angular_velocity.z,
             )
 
-        # Pose and velocity in Gazebo world frame
-        # TODO: hardcoded pose
-        world_pose = Pose3d(0, 0, 0, 0, 0, np.radians(90))
-        # print(f"world_pose: {world_pose}")
+        # Pose in Gazebo world frame
+        world_pose = None
+        for pose in self.pose_info_msg.pose:
+            # Filter for the model
+            if pose.name == self.model_name:
+                world_pos = Vector3d(pose.position.x, pose.position.y, pose.position.z)
+                world_rot = Quaterniond(
+                    pose.orientation.w,
+                    pose.orientation.x,
+                    pose.orientation.y,
+                    pose.orientation.z,
+                )
+                world_pose = Pose3d(world_pos, world_rot)
 
+        # Velocity in Gazebo world frame
         # TODO: hardcoded velocity
         world_lin_vel = Vector3d(0, 0, 0)
         # print(f"world_lin_vel: {world_lin_vel}")
@@ -570,3 +583,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # help(Pose3d)
+    # help(Quaterniond)
