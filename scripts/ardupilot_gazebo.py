@@ -11,6 +11,7 @@ python ./src/ardupilot_gazebo/scripts/ardupilot_gazebo.py --world iris_runway --
 import copy
 import json
 import math
+import numpy as np
 import os
 import socket
 import struct
@@ -46,6 +47,8 @@ def gz_version():
 
 
 if gz_version() == GZ_VERSION_JETTY:
+    from gz.math import Vector3d
+    from gz.math import Pose3d
     from gz.msgs.boolean_pb2 import Boolean
     from gz.msgs.clock_pb2 import Clock
     from gz.msgs.double_pb2 import Double
@@ -118,10 +121,10 @@ class ArduPilotGazeboBridge:
         # Stats
         self.frame_count = 0
         self.frame_time = time.monotonic()
-        self.print_frame_count = 1000
+        self.print_frame_count = 10000
 
         # Payload
-        self.json_str = None
+        self.json_data = None
         self.start_time = time.monotonic()
 
         # Transport
@@ -214,34 +217,38 @@ class ArduPilotGazeboBridge:
 
             self.frame_count += 1
 
-            #
+            # publish actuator commands
             self._send_commands()
 
+            # TODO how to wait for the physics update step to complete?
+
             # post-update
-            # TODO
-            # self._create_state_json()
-            # self._send_state()
-            phys_time = time.monotonic() - self.start_time
-            gyro = [0.0, 0.0, 0.0]
-            accel = [0.0, 0.0, 0.0]
-            pos = [0.0, 0.0, 0.0]
-            vel = [0.0, 0.0, 0.0]
-            quat = [0.0, 0.0, 0.0, 1.0]
+            self._create_state_json()
+            self._send_state(address)
 
-            json_data = {
-                "timestamp": phys_time,
-                "imu": {"gyro": gyro, "accel_body": accel},
-                "position": pos,
-                "quaternion": quat,
-                "velocity": vel,
-            }
-
-            self.sock.sendto(
-                (json.dumps(json_data, separators=(",", ":")) + "\n").encode("ascii"),
-                address,
-            )
+            # TODO keep for reference
+            # phys_time = time.monotonic() - self.start_time
+            # gyro = [0.0, 0.0, 0.0]
+            # accel = [0.0, 0.0, 0.0]
+            # pos = [0.0, 0.0, 0.0]
+            # vel = [0.0, 0.0, 0.0]
+            # quat = [0.0, 0.0, 0.0, 1.0]
+            #
+            # json_data = {
+            #     "timestamp": phys_time,
+            #     "imu": {"gyro": gyro, "accel_body": accel},
+            #     "position": pos,
+            #     "quaternion": quat,
+            #     "velocity": vel,
+            # }
+            #
+            # self.sock.sendto(
+            #     (json.dumps(json_data, separators=(",", ":")) + "\n").encode("ascii"),
+            #     address,
+            # )
 
             if self.frame_count % self.print_frame_count == 0:
+                phys_time = time.monotonic() - self.start_time
                 now = time.time()
                 total_time = now - self.frame_time
                 print(
@@ -261,8 +268,22 @@ class ArduPilotGazeboBridge:
         self.plugin.connection_timeout_max_count
         self.plugin.lock_step = False
         self.plugin.have_32_channels = False
-        self.plugin.flu_to_frd = [0, 0, 0, 180, 0, 0]
-        self.plugin.enu_to_ned = [0, 0, 0, 180, 0, 90]
+        self.plugin.flu_to_frd = [
+            0,
+            0,
+            0,
+            np.radians(180),
+            np.radians(0),
+            np.radians(0),
+        ]
+        self.plugin.enu_to_ned = [
+            0,
+            0,
+            0,
+            np.radians(180),
+            np.radians(0),
+            np.radians(90),
+        ]
         self.plugin.imu_name = "iris_with_standoffs::imu_link::imu_sensor"
 
         control = Control()
@@ -396,27 +417,108 @@ class ArduPilotGazeboBridge:
             cmd_msg.data = cmd
             pub.publish(cmd_msg)
             # /model/iris_with_ardupilot_1/joint/rotor_3_joint/cmd_vel
-            print(f"Publish command {cmd_msg.data} for channel: {i}")
+            # print(f"Publish command {cmd_msg.data} for channel: {i}")
 
     def _create_state_json(self):
-        pass
-        # timestamp = time.monotonic() - self.start_time
+        lin_acc = np.zeros(3)
+        ang_vel = np.zeros(3)
+        with self.imu_lock:
+            lin_acc = Vector3d(
+                self.imu_msg.linear_acceleration.x,
+                self.imu_msg.linear_acceleration.y,
+                self.imu_msg.linear_acceleration.z,
+            )
+            ang_vel = Vector3d(
+                self.imu_msg.angular_velocity.x,
+                self.imu_msg.angular_velocity.y,
+                self.imu_msg.angular_velocity.z,
+            )
 
-        # self.json_str = json.dumps(
-        #     {
-        #         "timestamp": timestamp,
-        #         "imu": {"gyro": [0.0, 0.0, 0.0], "accel_body": [0.0, 0.0, 0.0]},
-        #         "position": [0.0, 0.0, 0.0],
-        #         "quaternion": [0.0, 0.0, 0.0, 1.0],
-        #         "velocity": [0.0, 0.0, 0.0],
-        #     }
-        # )
-        # print(self.json_str)
-        # print(len(self.json_str))
+        # Pose and velocity in Gazebo world frame
+        # TODO: hardcoded pose
+        world_pose = Pose3d(0, 0, 0, 0, 0, np.radians(90))
+        # print(f"world_pose: {world_pose}")
 
-    def _send_state(self):
-        pass
-        # self.sock.sendto(self.json_str, self.address, self.port)
+        # TODO: hardcoded velocity
+        world_lin_vel = Vector3d(0, 0, 0)
+        # print(f"world_lin_vel: {world_lin_vel}")
+
+        bdy_G_to_bdy_A = Pose3d(
+            self.plugin.flu_to_frd[0],
+            self.plugin.flu_to_frd[1],
+            self.plugin.flu_to_frd[2],
+            self.plugin.flu_to_frd[3],
+            self.plugin.flu_to_frd[4],
+            self.plugin.flu_to_frd[5],
+        )
+        bdy_A_to_bdy_G = bdy_G_to_bdy_A.inverse()
+        # print(f"bdy_G_to_bdy_A: {bdy_G_to_bdy_A}")
+        # print(f"bdy_A_to_bdy_G: {bdy_A_to_bdy_G}")
+
+        wld_G_to_wld_A = Pose3d(
+            self.plugin.enu_to_ned[0],
+            self.plugin.enu_to_ned[1],
+            self.plugin.enu_to_ned[2],
+            self.plugin.enu_to_ned[3],
+            self.plugin.enu_to_ned[4],
+            self.plugin.enu_to_ned[5],
+        )
+        wld_A_to_wld_G = wld_G_to_wld_A.inverse()
+        # print(f"wld_A_to_wld_G: {wld_A_to_wld_G}")
+        # print(f"wld_G_to_wld_A: {wld_G_to_wld_A}")
+
+        # Gazebo world to body transform
+        wld_G_to_bdy_G = world_pose
+        wld_A_to_bdy_A = wld_A_to_wld_G * wld_G_to_bdy_G * bdy_A_to_bdy_G.inverse()
+        # print(f"wld_A_to_bdy_A: {wld_A_to_bdy_A}")
+
+        # Velocity transform
+        vel_wld_G = world_lin_vel
+        vel_wld_A = wld_A_to_wld_G.rot() * vel_wld_G + wld_A_to_wld_G.pos()
+        # print(f"vel_wld_A: {vel_wld_A}")
+
+        # TODO use sim_time
+        timestamp = time.monotonic() - self.start_time
+
+        # Create JSON payload
+        self.json_data = {
+            "timestamp": timestamp,
+            "imu": {
+                "gyro": [
+                    ang_vel.x(),
+                    ang_vel.y(),
+                    ang_vel.z(),
+                ],
+                "accel_body": [
+                    lin_acc.x(),
+                    lin_acc.y(),
+                    lin_acc.z(),
+                ],
+            },
+            "position": [
+                wld_A_to_bdy_A.pos().x(),
+                wld_A_to_bdy_A.pos().y(),
+                wld_A_to_bdy_A.pos().z(),
+            ],
+            "quaternion": [
+                wld_A_to_bdy_A.rot().w(),
+                wld_A_to_bdy_A.rot().x(),
+                wld_A_to_bdy_A.rot().y(),
+                wld_A_to_bdy_A.rot().z(),
+            ],
+            "velocity": [
+                vel_wld_A.x(),
+                vel_wld_A.y(),
+                vel_wld_A.z(),
+            ],
+        }
+        # print(f"json_data: {self.json_data}")
+
+    def _send_state(self, address):
+        self.sock.sendto(
+            (json.dumps(self.json_data, separators=(",", ":")) + "\n").encode("ascii"),
+            address,
+        )
 
     def _clock_cb(self, msg):
         with self.clock_lock:
@@ -455,18 +557,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    json_str = json.dumps(
-        {
-            "timestamp": 1,
-            "imu": {"gyro": [0.0, 0.0, 0.0], "accel_body": [0.0, 0.0, 0.0]},
-            "position": [0.0, 0.0, 0.0],
-            "quaternion": [0.0, 0.0, 0.0, 1.0],
-            "velocity": [0.0, 0.0, 0.0],
-        }
-    )
-    # print(json_str)
-    # print(len(json_str))
 
     # ======================================================================= #
     # Create bridge
