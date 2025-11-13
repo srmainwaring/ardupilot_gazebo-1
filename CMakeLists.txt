@@ -87,6 +87,18 @@ find_package(OpenCV REQUIRED)
 
 pkg_check_modules(GST REQUIRED gstreamer-1.0 gstreamer-app-1.0)
 
+# --------------------------------------------------------------------------- #
+# Build executable.
+
+add_executable(ArduPilotGazeboBridge
+    src/ArduPilotGazeboBridge.cc
+)
+target_include_directories(ArduPilotGazeboBridge PRIVATE
+  include
+)
+target_link_libraries(ArduPilotGazeboBridge PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
 
 # --------------------------------------------------------------------------- #
 # Build plugin.
@@ -148,6 +160,7 @@ target_link_libraries(GstCameraPlugin PRIVATE
 
 install(
   TARGETS
+  ArduPilotGazeboBridge
   ArduPilotPlugin
   ParachutePlugin
   CameraZoomPlugin
