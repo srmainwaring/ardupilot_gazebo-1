@@ -2,7 +2,7 @@
 <sdf version="1.9">
   <world name="zephyr_runway">
     <physics name="1ms" type="ignore">
-      <max_step_size>0.001</max_step_size>
+      <max_step_size>0.002</max_step_size>
       <real_time_factor>-1.0</real_time_factor>
     </physics>
 
@@ -111,9 +111,53 @@
     </include>
 
     <include>
-      <uri>model://zephyr_with_ardupilot</uri>
+      <uri>model://zephyr_with_ardupilot_1</uri>
       <pose degrees="true">0 0 0.422 -90 0 180</pose>
     </include>
 
+    <!-- <include>
+      <uri>model://zephyr_with_ardupilot_2</uri>
+      <pose degrees="true">2 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_3</uri>
+      <pose degrees="true">4 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_4</uri>
+      <pose degrees="true">6 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_5</uri>
+      <pose degrees="true">8 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_6</uri>
+      <pose degrees="true">10 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_7</uri>
+      <pose degrees="true">12 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_8</uri>
+      <pose degrees="true">14 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_9</uri>
+      <pose degrees="true">16 0 0.422 -90 0 180</pose>
+    </include>
+
+    <include>
+      <uri>model://zephyr_with_ardupilot_10</uri>
+      <pose degrees="true">18 0 0.422 -90 0 180</pose>
+    </include> -->
   </world>
 </sdf>
