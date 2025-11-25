@@ -92,6 +92,8 @@ pkg_check_modules(GST REQUIRED gstreamer-1.0 gstreamer-app-1.0)
 
 add_executable(ArduPilotGazeboBridge
     src/ArduPilotGazeboBridge.cc
+    src/SocketUDP.cc
+    src/Util.cc
 )
 target_include_directories(ArduPilotGazeboBridge PRIVATE
   include
