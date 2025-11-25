@@ -164,6 +164,7 @@
       <use_force_commands>1</use_force_commands>
       <topic>/model/iris_with_ardupilot_1/joint/rotor_0_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
+      <disable_braking>1</disable_braking>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
       <cmd_max>2.5</cmd_max>
@@ -176,6 +177,7 @@
       <use_force_commands>1</use_force_commands>
       <topic>/model/iris_with_ardupilot_1/joint/rotor_1_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
+      <disable_braking>1</disable_braking>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
       <cmd_max>2.5</cmd_max>
@@ -188,6 +190,7 @@
       <use_force_commands>1</use_force_commands>
       <topic>/model/iris_with_ardupilot_1/joint/rotor_2_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
+      <disable_braking>1</disable_braking>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
       <cmd_max>2.5</cmd_max>
@@ -200,6 +203,7 @@
       <use_force_commands>1</use_force_commands>
       <topic>/model/iris_with_ardupilot_1/joint/rotor_3_joint/cmd_vel</topic>
       <initial_velocity>0.0</initial_velocity>
+      <disable_braking>1</disable_braking>
       <p_gain>0.2</p_gain>
       <d_gain>0</d_gain>
       <cmd_max>2.5</cmd_max>
