@@ -258,10 +258,17 @@ Interface
 - Class `GZBridge` constructed with world and model names.
 - Subscriptions to topics
   - Clock
-  - PoseIno
-  - Imu
+    - used to synchronise the FC clock with Gazebo
+  - PoseInfo -> ground truth
+    - pos_w
+    - rot_w
+    - vel_w (calculated)
+    - acc_w (calculated)
+  - Imu -> body lin_acc and ang_vel
+    - accel_b = flu_to_frd.rotate(msg.linear_acceleration)
+    - gyro_b  = flu_to_frd.rotate(msg.angular_velocity)
   - Mag
-  - Odometry
+  - Odometry -> odometry
   - LaserScan
   - DistanceSensor
   - AirSpeed
@@ -309,5 +316,18 @@ Interface
 - Publish commands from the ArduPilotPlugin
 - Topic name /model/{model}/joint/{joint_name}/cmd_vel
 - Consider using /model/{model}/joint/{joint_name}/command/motor_speed to standardise (PX4)?
-- A
 
+- Why does sim_time not reset when server restarts if the gui is running?
+
+## Multi-vehicle issues
+
+### Fail to load default parameters
+
+- Path to defaults not modified for vehicles requiring additional parameters
+- Only the first item in the path is altered.
+- Error occurs in the SITL binary: failed to find default file ... => dumpstack
+- `sim_vehicle.py` : `L778`
+
+### Fail to set rc override
+
+- MAVProxy rc override is always sent to the vehicle with the highest sysid
