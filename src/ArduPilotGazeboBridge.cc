@@ -28,6 +28,7 @@
 #include <gz/msgs/pose_v.pb.h>
 #include <gz/msgs/stringmsg.pb.h>
 
+#include <array>
 #include <cstdint>
 #include <chrono>
 #include <memory>
@@ -48,6 +49,8 @@
 
 #include "SocketUDP.hh"
 #include "Util.hh"
+
+#define DEBUG_JSON_IO 1
 
 struct servo_packet_16 {
     uint16_t magic;         // 18458 expected magic value
@@ -124,7 +127,7 @@ struct ArduPilotPlugin
   std::string fdm_address{"127.0.0.1"};
   uint16_t fdm_port{9002};
   uint16_t connection_timeout_max_count{5};
-  bool lock_step{true};
+  bool lock_step{false};
   bool have_32_channels{false};
   gz::math::Pose3d pose_flu_to_frd;
   gz::math::Pose3d pose_enu_to_ned;
@@ -138,7 +141,7 @@ public:
   ArduPilotGazeboBridge()
   {
     this->world_name = "runway";
-    this->model_name = "r1_rover";
+    this->model_name = "iris_with_ardupilot_1";
   }
 
   void configure()
@@ -160,15 +163,29 @@ public:
     uint64_t count = 0;
     while (true)
     {
+      // Has the clock updated?
+      {
+        std::lock_guard<std::mutex> lock(this->clock_mutex);
+        this->timestamp = this->clock_msg.sim().sec()
+            + 1.0e-9 * this->clock_msg.sim().nsec();      
+      }
+      if (this->prev_timestamp >= this->timestamp)
+      {
+        std::this_thread::sleep_for(100us);
+        continue;
+      }
+      this->prev_timestamp = this->timestamp;
 
       // Pre-update
       if (this->update_state == UpdateState::PREUPDATE)
       {
         // Publish actuator commands
-        this->_recv_servo_packet();
-        this->_send_commands();
-
-        this->update_state = UpdateState::POSTUPDATE;
+        bool result = this->_recv_servo_packet();
+        if (result)
+        {
+          this->_send_commands();
+          this->update_state = UpdateState::POSTUPDATE;
+        }
       }
 
       // Post-update
@@ -181,13 +198,10 @@ public:
         this->update_state = UpdateState::PREUPDATE;
       }
 
-      // Throttle update
-      std::cout << "Step: " << count << std::endl;
+      // std::cout << "Step: " << count << std::endl;
       count++;
-      std::this_thread::sleep_for(1ms);
     }
   }
-
 
 private:
   void _load_model()
@@ -202,7 +216,7 @@ private:
     
     // Common settings
     this->plugin.connection_timeout_max_count = 5;
-    this->plugin.lock_step = false;
+    this->plugin.lock_step = true;
     this->plugin.have_32_channels = false;
     this->plugin.pose_flu_to_frd = gz::math::Pose3d(
         0.0,
@@ -220,6 +234,61 @@ private:
         0.0,
         ninety_deg.Radian()
     );
+
+    if (this->model_name == "iris_with_ardupilot_1")
+    {
+      this->plugin.imu_name = "iris_with_standoffs::imu_link::imu_sensor";
+
+      {
+        auto &control = this->controls.emplace_back();
+        control.channel = 0;
+        control.type = "COMMAND";
+        control.use_force = true;
+        control.joint_name = "iris_with_standoffs::rotor_0_joint";
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_0_joint/cmd_vel";
+        control.multiplier = 838.0;
+        control.offset = 0.0;
+        control.servo_max = 2000.0;
+        control.servo_min = 1000.0;
+      }
+
+      {
+        auto &control = this->controls.emplace_back();
+        control.channel = 1;
+        control.type = "COMMAND";
+        control.use_force = true;
+        control.joint_name = "iris_with_standoffs::rotor_1_joint";
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_1_joint/cmd_vel";
+        control.multiplier = 838.0;
+        control.offset = 0.0;
+        control.servo_max = 2000.0;
+        control.servo_min = 1000.0;
+      }
+      {
+        auto &control = this->controls.emplace_back();
+        control.channel = 2;
+        control.type = "COMMAND";
+        control.use_force = true;
+        control.joint_name = "iris_with_standoffs::rotor_2_joint";
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_2_joint/cmd_vel";
+        control.multiplier = -838.0;
+        control.offset = -0.0;
+        control.servo_max = 2000.0;
+        control.servo_min = 1000.0;
+      }
+      {
+        auto &control = this->controls.emplace_back();
+        control.channel = 3;
+        control.type = "COMMAND";
+        control.use_force = true;
+        control.joint_name = "iris_with_standoffs::rotor_3_joint";
+        control.cmd_topic = "/model/iris_with_ardupilot_1/joint/rotor_3_joint/cmd_vel";
+        control.multiplier = -838.0;
+        control.offset = -0.0;
+        control.servo_max = 2000.0;
+        control.servo_min = 1000.0;
+      }
+    }
 
     if (this->model_name == "r1_rover")
     {
@@ -292,10 +361,14 @@ private:
     std::cout << "Subscribing to Odometry on: " << this->odometry_topic << std::endl;
 
     // gz.msgs.Pose_V
+    // either: published to gui (at around 50Hz)
     // /world/iris_runway/pose/info
-    this->pose_info_topic = std::string("/world/").append(this->world_name).append("/pose/info");
-    this->node.Subscribe(this->pose_info_topic, &ArduPilotGazeboBridge::_pose_info_cb, this);
-    std::cout << "Subscribing to Pose_V on: " << this->pose_info_topic << std::endl;
+    // or: published by odom at 1000 Hz
+    // /model/iris_with_ardupilot_1/pose
+    // this->pose_topic = std::string("/world/").append(this->world_name).append("/pose/info");
+    this->pose_topic = std::string("/model/").append(this->model_name).append("/pose");
+    this->node.Subscribe(this->pose_topic, &ArduPilotGazeboBridge::_pose_cb, this);
+    std::cout << "Subscribing to Pose_V on: " << this->pose_topic << std::endl;
 
     // gz.msgs.IMU
     // /world/runway/model/r1_rover/link/imu_link/sensor/imu_sensor/imu
@@ -390,7 +463,7 @@ private:
     uint16_t pkt_magic{0};
     uint16_t pkt_frame_rate{0};
     uint16_t pkt_frame_count{0};
-    std::array<uint16_t, 32> pkt_pwm;
+    // std::array<uint16_t, 32> pkt_pwm;
     ssize_t recv_size{-1};
     if (this->have_32_channels)
     {
@@ -405,7 +478,12 @@ private:
       pkt_magic = pkt.magic;
       pkt_frame_rate = pkt.frame_rate;
       pkt_frame_count = pkt.frame_count;
-      std::copy(std::begin(pkt.pwm), std::end(pkt.pwm), std::begin(pkt_pwm));
+      //! @todo do not copy if not servo packet received
+      if (recv_size != -1)
+      {
+        std::copy(std::begin(pkt.pwm), std::end(pkt.pwm),
+            std::begin(this->pkt_pwm));
+      }
     }
     else
     {
@@ -420,7 +498,12 @@ private:
       pkt_magic = pkt.magic;
       pkt_frame_rate = pkt.frame_rate;
       pkt_frame_count = pkt.frame_count;
-      std::copy(std::begin(pkt.pwm), std::end(pkt.pwm), std::begin(pkt_pwm));
+      //! @todo do not copy if not servo packet received
+      if (recv_size != -1)
+      {
+        std::copy(std::begin(pkt.pwm), std::end(pkt.pwm),
+            std::begin(this->pkt_pwm));
+      }
     }
 
     // didn't receive a packet, increment timeout count if online, then return
@@ -452,24 +535,24 @@ private:
         return false;
     }
 
-// #if DEBUG_JSON_IO
-//     int max_servo_channels = this->have_32_channels ? 32 : 16;
+#if DEBUG_JSON_IO
+    int max_servo_channels = this->have_32_channels ? 32 : 16;
 
-//     // debug: inspect sitl packet
-//     std::ostringstream oss;
-//     oss << "recv " << recv_size << " bytes from "
-//         << this->fcu_address << ":"
-//         << this->fcu_port << "\n";
-//     // oss << "magic: " << pkt_magic << "\n";
-//     // oss << "frame_rate: " << pkt_frame_rate << "\n";
-//     oss << "frame_count: " << pkt_frame_count << "\n";
-//     // oss << "pwm: [";
-//     // for (auto i=0; i<max_servo_channels - 1; ++i) {
-//     //     oss << pkt_pwm[i] << ", ";
-//     // }
-//     // oss << pkt_pwm[max_servo_channels - 1] << "]\n";
-//     std::cout << "\n" << oss.str() << std::endl;
-// #endif
+    // debug: inspect sitl packet
+    std::ostringstream oss;
+    oss << "recv " << recv_size << " bytes from "
+        << this->fcu_address << ":"
+        << this->fcu_port << "\n";
+    oss << "magic: " << pkt_magic << "\n";
+    oss << "frame_rate: " << pkt_frame_rate << "\n";
+    oss << "frame_count: " << pkt_frame_count << "\n";
+    oss << "pwm: [";
+    for (auto i=0; i<max_servo_channels - 1; ++i) {
+        oss << this->pkt_pwm[i] << ", ";
+    }
+    oss << this->pkt_pwm[max_servo_channels - 1] << "]\n";
+    std::cout << "\n" << oss.str() << std::endl;
+#endif
 
     // check magic, return if invalid
     constexpr uint16_t magic_16 = 18458;
@@ -533,33 +616,60 @@ private:
     // reset the connection timeout so we don't accumulate
     this->connection_timeout_count = 0;
 
-    //! @todo implement
-    // this->UpdateMotorCommands(pkt_pwm);
-
     return true;
   }
 
   void _send_commands()
   {
-    
+    for (size_t i = 0; i < this->controls.size(); ++i)
+    {
+      const auto &control = this->controls[i];
+      const uint16_t pwm = this->pkt_pwm[control.channel];
+      const double pwm_max = control.servo_max;
+      const double pwm_min = control.servo_min;
+      const double multiplier = control.multiplier;
+      const double offset = control.offset;
+
+      // pwm = 0 => no servo output.
+      if (pwm != 0)
+      {
+        // bound incoming cmd between 0 and 1
+        double normalised_cmd = (pwm - pwm_min) / (pwm_max - pwm_min);
+        normalised_cmd = gz::math::clamp(normalised_cmd, 0.0, 1.0);
+        double cmd = multiplier * (normalised_cmd + offset);
+
+        gz::msgs::Double cmd_msg;
+        cmd_msg.set_data(cmd);
+        this->command_pubs[i].Publish(cmd_msg);
+
+// #if DEBUG_JSON_IO
+//         std::cout << "apply input chan["
+//             << control.channel
+//             << "] to control[" << i
+//             << "] with joint name ["
+//             << control.joint_name
+//             // << "] ready [" << this->dataPtr->controls[i].outputReady
+//             << "] pwm [" << pwm
+//             << "] normalised_cmd [" << normalised_cmd
+//             << "] cmd [" << cmd
+//             << "].\n";
+// #endif
+      }
+    }
   }
 
   void _create_state_json()
   {
-    gz::msgs::IMU imu_msg;
+    gz::msgs::IMU imu_msg_;
     {
         std::lock_guard<std::mutex> lock(this->imu_mutex);
         // Wait until we've received a valid message.
-        // if (!this->imu_msg_valid)
-        // {
-        //     return;
-        // }
-        imu_msg = this->imu_msg;
+        if (!this->imu_msg_valid)
+        {
+            return;
+        }
+        imu_msg_ = this->imu_msg;
     }
-    
-    // Simulation time
-    double timestamp = this->clock_msg.sim().sec()
-        + 1.9e-9 * this->clock_msg.sim().nsec();
 
     //! @todo allow other IMU orientations
     //! @note it is assumed that the imu orientation conforms to the
@@ -570,30 +680,113 @@ private:
 
     // Linear acceleration
     gz::math::Vector3d linearAccel{
-        imu_msg.linear_acceleration().x(),
-        imu_msg.linear_acceleration().y(),
-        imu_msg.linear_acceleration().z(),
+        imu_msg_.linear_acceleration().x(),
+        imu_msg_.linear_acceleration().y(),
+        imu_msg_.linear_acceleration().z(),
     };
 
     // Linear acceleration
     gz::math::Vector3d angularVel{
-        imu_msg.angular_velocity().x(),
-        imu_msg.angular_velocity().y(),
-        imu_msg.angular_velocity().z(),
+        imu_msg_.angular_velocity().x(),
+        imu_msg_.angular_velocity().y(),
+        imu_msg_.angular_velocity().z(),
     };
+    
+    // Pose and velocity in Gazebo world frame
+    // gz::math::Angle ninety_deg;
+    // ninety_deg.SetDegree(90.0);
+    // gz::math::Pose3d worldPose = gz::math::Pose3d(
+    //     0.0,
+    //     0.0,
+    //     0.0,
+    //     0.0,
+    //     0.0,
+    //     ninety_deg.Radian()
+    // );
 
+    gz::msgs::Pose_V pose_msg_;
+    gz::msgs::Pose_V prev_pose_msg_;
+    {
+        std::lock_guard<std::mutex> lock(this->pose_mutex);
+        pose_msg_ = this->pose_msg;
+        prev_pose_msg_ = this->prev_pose_msg;
+    }
 
-    gz::math::Pose3d wldAToBdyA;
-    gz::math::Vector3d velWldA;
+    gz::math::Vector3d world_pos;
+    gz::math::Quaterniond world_rot;
+    double world_pos_timestamp{0.0};
+    for (const auto &pose : pose_msg_.pose())
+    {
+      // Filter for the model
+      // if (pose.name() == this->model_name)
+      {
+        world_pos = gz::math::Vector3d(
+          pose.position().x(),
+          pose.position().y(),
+          pose.position().z());
+        world_rot = gz::math::Quaterniond(
+          pose.orientation().w(),
+          pose.orientation().x(),
+          pose.orientation().y(),
+          pose.orientation().z());
+        world_pos_timestamp = pose.header().stamp().sec()
+            + 1.0e-9 * pose.header().stamp().nsec();
+      }
+    }
+    gz::math::Pose3d worldPose(world_pos, world_rot);
+    gz::math::Vector3d worldLinearVel;
 
-    // build JSON document
+    for (const auto &pose : prev_pose_msg_.pose())
+    {
+      // Filter for the model
+      // if (pose.name() == this->model_name)
+      {
+        gz::math::Vector3d prev_world_pos(
+          pose.position().x(),
+          pose.position().y(),
+          pose.position().z());
+        double prev_world_pos_timestamp = pose.header().stamp().sec()
+            + 1.0e-9 * pose.header().stamp().nsec();
+        double dt = world_pos_timestamp - prev_world_pos_timestamp;
+        double dx = world_pos.X() - prev_world_pos.X();
+        double dy = world_pos.Y() - prev_world_pos.Y();
+        double dz = world_pos.Z() - prev_world_pos.Z();
+        worldLinearVel = gz::math::Vector3d(dx/dt, dy/dt, dz/dt);
+
+        std::cout << "worldLinearVel: dt: " << dt
+            << " dx: " << dx
+            << " dy: " << dy
+            << " dz: " << dz
+            << " v: " << worldLinearVel
+            << std::endl;
+      }
+    }
+
+    // std::cout << "prev_world_pose: " << prev_pose_msg_.DebugString()
+    //     << std::endl;
+    // std::cout << "world_pose:      " << pose_msg_.DebugString()
+    //     << std::endl;
+
+    // Position and orientation transform (Aircraft world to Aircraft body)
+    gz::math::Pose3d bdyAToBdyG = this->plugin.pose_flu_to_frd.Inverse();
+    gz::math::Pose3d wldAToWldG = this->plugin.pose_enu_to_ned.Inverse();
+
+    gz::math::Pose3d wldGToBdyG = worldPose;
+    gz::math::Pose3d wldAToBdyA =
+        wldAToWldG * wldGToBdyG * bdyAToBdyG.Inverse();
+
+    // Velocity transformation
+    gz::math::Vector3d velWldG = worldLinearVel;
+    gz::math::Vector3d velWldA = wldAToWldG.Rot() * velWldG + wldAToWldG.Pos();
+
+    // Build JSON document
     rapidjson::StringBuffer string_buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(string_buf);
 
     writer.StartObject();
 
     writer.Key("timestamp");
-    writer.Double(timestamp);
+    writer.Double(this->timestamp);
 
     writer.Key("imu");
     writer.StartObject();
@@ -641,23 +834,32 @@ private:
 
     // Get JSON string
     this->json_data = "\n" + std::string(string_buf.GetString()) + "\n";
-    std::cout << this->json_data << std::endl;
+    // std::cout << this->json_data << std::endl;
+    
+    // std::cout << "roll: " << wldAToBdyA.Rot().Roll()
+    //           << ", pitch: " << wldAToBdyA.Rot().Pitch()
+    //           << ", yaw: " << wldAToBdyA.Rot().Pitch()
+    //           << std::endl;
   }
 
   void _send_state()
   {
-    auto bytes_sent = this->sock.sendto(
+#if DEBUG_JSON_IO
+    auto bytes_sent =
+#endif
+    this->sock.sendto(
         this->json_data.c_str(),
         this->json_data.size(),
         this->fcu_address,
         this->fcu_port);
 
+#if DEBUG_JSON_IO
     std::cout << "Sent " << bytes_sent <<  " bytes to "
               << this->fcu_address << ":"
-              << this->fcu_port << std::endl;
-              // << "frame_count: " << this->frame_count
-              // << std::endl;
-
+              << this->fcu_port << "\n"
+              << "frame_count: " << this->fcu_frame_count
+              << std::endl;
+#endif
   }
 
   void _clock_cb(const gz::msgs::Clock &_msg)
@@ -671,6 +873,7 @@ private:
   {
     std::lock_guard<std::mutex> lock(this->imu_mutex);
     this->imu_msg = _msg;
+    this->imu_msg_valid = true;
     // std::cout << this->imu_msg.DebugString() << std::endl;
   }
 
@@ -681,11 +884,12 @@ private:
     // std::cout << this->odometry_msg.DebugString() << std::endl;
   }
 
-  void _pose_info_cb(const gz::msgs::Pose_V &_msg)
+  void _pose_cb(const gz::msgs::Pose_V &_msg)
   {
-    std::lock_guard<std::mutex> lock(this->pose_info_mutex);
-    this->pose_info_msg = _msg;
-    // std::cout << this->pose_info_msg.DebugString() << std::endl;
+    std::lock_guard<std::mutex> lock(this->pose_mutex);
+    this->prev_pose_msg = this->pose_msg;
+    this->pose_msg = _msg;
+    // std::cout << this->pose_msg.DebugString() << std::endl;
   }
 
   enum class UpdateState
@@ -723,13 +927,17 @@ private:
   bool ardupilot_online{false};
 
   // Packet
-  servo_packet_16 servo_packet;
+  // servo_packet_16 servo_packet;
+  std::array<uint16_t, 32> pkt_pwm{};
 
   // Stats
   uint32_t frame_count{0};
   uint32_t print_frame_count{0};
   double pre_update_prev_time;
   double post_update_prev_time;
+
+  double timestamp{0.0};
+  double prev_timestamp{0.0};
 
   // Payload
   std::string json_data;
@@ -743,22 +951,24 @@ private:
   gz::msgs::Clock clock_msg;
   std::string clock_topic;
   std::mutex clock_mutex;
-  std::chrono::steady_clock::duration clock_prev_recv_time{0};
+  // std::chrono::steady_clock::duration clock_prev_recv_time{0};
 
+  bool imu_msg_valid{false};
   gz::msgs::IMU imu_msg;
   std::string imu_topic;
   std::mutex imu_mutex;
-  std::chrono::steady_clock::duration imu_prev_recv_time{0};
+  // std::chrono::steady_clock::duration imu_prev_recv_time{0};
 
   gz::msgs::Odometry odometry_msg;
   std::string odometry_topic;
   std::mutex odometry_mutex;
-  std::chrono::steady_clock::duration odometry_prev_recv_time{0};
+  // std::chrono::steady_clock::duration odometry_prev_recv_time{0};
 
-  gz::msgs::Pose_V pose_info_msg;
-  std::string pose_info_topic;
-  std::mutex pose_info_mutex;
-  std::chrono::steady_clock::duration pose_info_prev_recv_time{0};
+  gz::msgs::Pose_V pose_msg;
+  gz::msgs::Pose_V prev_pose_msg;
+  std::string pose_topic;
+  std::mutex pose_mutex;
+  // std::chrono::steady_clock::duration pose_prev_recv_time{0};
 
   // Track update state
   UpdateState update_state{UpdateState::PREUPDATE};
@@ -767,10 +977,6 @@ private:
 int main(int argc, char** argv)
 {
   std::cout << "ArduPilot Gazebo Bridge" << std::endl;
-
-  //! @todo replace hardcoded configuration
-  std::string model_name = "r1_rover";
-  std::string world_name = "runway";
   
   ArduPilotGazeboBridge gz_bridge;
   gz_bridge.configure();
