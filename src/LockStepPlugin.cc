@@ -24,6 +24,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <gz/common/Profiler.hh>
@@ -52,8 +53,11 @@ namespace systems {
 //////////////////////////////////////////////////
 class LockStepPlugin::Impl
 {
+  /// \brief Handle a lock step message.
+  public: void OnEnable(const msgs::Boolean &_msg);
+
   /// \brief Handle a step message.
-  public: void OnStartStep(const msgs::Time &_msg);
+  public: void OnStart(const msgs::Time &_msg);
 
   /// \brief The model containing this plugin.
   public: Model model{kNullEntity};
@@ -67,8 +71,14 @@ class LockStepPlugin::Impl
   /// \brief The world name.
   public: std::string worldName;
 
+  /// \brief Mutex used when accessing lock step message.
+  public: std::mutex enableLockStepMutex;
+
+  /// \brief True if lock-step is enabled.
+  public: bool enableLockStep{false};
+
   /// \brief Mutex used when accessing start step message.
-  public: std::mutex startStepMsgMutex;
+  public: std::mutex startStepMutex;
 
   /// \brief Last start step message received.
   public: gz::msgs::Time startStepMsg;
@@ -99,9 +109,16 @@ class LockStepPlugin::Impl
 };
 
 //////////////////////////////////////////////////
-void LockStepPlugin::Impl::OnStartStep(const msgs::Time &_msg)
+void LockStepPlugin::Impl::OnEnable(const msgs::Boolean &_msg)
 {
-  std::lock_guard<std::mutex> lock(this->startStepMsgMutex);
+  std::lock_guard<std::mutex> lock(this->enableLockStepMutex);
+  this->enableLockStep = _msg.data();
+}
+
+//////////////////////////////////////////////////
+void LockStepPlugin::Impl::OnStart(const msgs::Time &_msg)
+{
+  std::lock_guard<std::mutex> lock(this->startStepMutex);
   this->startStepMsg = _msg;
   this->startStep = true;
 }
@@ -153,26 +170,36 @@ void LockStepPlugin::Configure(
   }
 
   // Parameters
-  std::string startStepTopic = "/model/" + this->impl->modelName
-      + "/start_step";
-  std::string stepCompleteTopic = "/model/" + this->impl->modelName
-      + "/step_complete";
+  std::string enableTopic = "/model/" + this->impl->modelName
+      + "/lock_step/enable";
+  std::string startTopic = "/model/" + this->impl->modelName
+      + "/lock_step/start";
+  std::string completeTopic = "/model/" + this->impl->modelName
+      + "/lock_step/complete";
 
   // Subscriptions
   this->impl->node.Subscribe(
-      startStepTopic,
-      &LockStepPlugin::Impl::OnStartStep, this->impl.get());
+      enableTopic,
+      &LockStepPlugin::Impl::OnEnable, this->impl.get());
 
   gzdbg << "LockStepPlugin subscribing to messages on "
-         << "[" << startStepTopic << "]"
+         << "[" << enableTopic << "]"
+         << std::endl;
+
+  this->impl->node.Subscribe(
+      startTopic,
+      &LockStepPlugin::Impl::OnStart, this->impl.get());
+
+  gzdbg << "LockStepPlugin subscribing to messages on "
+         << "[" << startTopic << "]"
          << std::endl;
 
   // Publishers
   this->impl->stepCompletePub =
-      this->impl->node.Advertise<msgs::Time>(stepCompleteTopic);
+      this->impl->node.Advertise<msgs::Time>(completeTopic);
 
   gzdbg << "LockStepPlugin publishing messages on "
-         << "[" << stepCompleteTopic << "]"
+         << "[" << completeTopic << "]"
          << std::endl;
 
   // Signal handler
@@ -191,6 +218,8 @@ void LockStepPlugin::PreUpdate(
     const UpdateInfo &_info,
     EntityComponentManager &_ecm)
 {
+  using namespace std::literals;
+
   GZ_PROFILE("LockStepPlugin::PreUpdate");
 
   if (!this->impl->isValidConfig)
@@ -198,7 +227,8 @@ void LockStepPlugin::PreUpdate(
     return;
   }
 
-  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime)
+  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime
+      && this->impl->enableLockStep)
   {
     while (!this->impl->startStep)
     {
@@ -207,9 +237,10 @@ void LockStepPlugin::PreUpdate(
       {
         break;
       }
+      std::this_thread::sleep_for(100us);
     }
     {
-      std::lock_guard<std::mutex> lock(this->impl->startStepMsgMutex);
+      std::lock_guard<std::mutex> lock(this->impl->startStepMutex);
       this->impl->startStep = false;
     }
   }
@@ -222,7 +253,8 @@ void LockStepPlugin::PostUpdate(
 {
   GZ_PROFILE("LockStepPlugin::PostUpdate");
 
-  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime)
+  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime
+      && this->impl->enableLockStep)
   {
     this->impl->lastUpdateSimTime = _info.simTime;
 
