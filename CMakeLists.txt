@@ -157,6 +157,17 @@ target_link_libraries(GstCameraPlugin PRIVATE
   ${GST_LINK_LIBRARIES}
 )
 
+add_library(LockStepPlugin
+  SHARED
+  src/LockStepPlugin.cc
+)
+target_include_directories(LockStepPlugin PRIVATE
+  include
+)
+target_link_libraries(LockStepPlugin PRIVATE
+  gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER}
+)
+
 # --------------------------------------------------------------------------- #
 # Install.
 
@@ -167,6 +178,7 @@ install(
   ParachutePlugin
   CameraZoomPlugin
   GstCameraPlugin
+  LockStepPlugin
   DESTINATION lib/${PROJECT_NAME}
 )
 
