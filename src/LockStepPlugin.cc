@@ -74,8 +74,11 @@ class LockStepPlugin::Impl
   /// \brief Mutex used when accessing lock step message.
   public: std::mutex enableLockStepMutex;
 
-  /// \brief True if lock-step is enabled.
+  /// \brief True if lock-step is to be enabled.
   public: bool enableLockStep{false};
+
+  /// \brief True if lock-step is enabled.
+  public: bool isLockStep{false};
 
   /// \brief Mutex used when accessing start step message.
   public: std::mutex startStepMutex;
@@ -106,6 +109,10 @@ class LockStepPlugin::Impl
 
   /// \brief Signal handler callback.
   public: void OnSignal(int _sig);
+
+  /// \brief Publish lock step complete.
+  public: void PublishLockStepComplete(
+      const std::chrono::steady_clock::duration &_simTime);
 };
 
 //////////////////////////////////////////////////
@@ -113,6 +120,9 @@ void LockStepPlugin::Impl::OnEnable(const msgs::Boolean &_msg)
 {
   std::lock_guard<std::mutex> lock(this->enableLockStepMutex);
   this->enableLockStep = _msg.data();
+  gzdbg << "LockStepPlugin: Received Enable Lock Step: "
+        << "[" << this->enableLockStep << "]"
+        << std::endl;
 }
 
 //////////////////////////////////////////////////
@@ -121,14 +131,37 @@ void LockStepPlugin::Impl::OnStart(const msgs::Time &_msg)
   std::lock_guard<std::mutex> lock(this->startStepMutex);
   this->startStepMsg = _msg;
   this->startStep = true;
+  gzdbg << "LockStepPlugin: Received Lock Step Start "
+        << "["
+        << this->startStepMsg.sec() << "s, "
+        << this->startStepMsg.nsec() << "ns"
+        << "]"
+        << std::endl;
 }
 
 //////////////////////////////////////////////////
 void LockStepPlugin::Impl::OnSignal(int _sig)
 {
-    gzdbg << "LockStepPlugin received signal[" << _sig  << "]"
+    gzdbg << "LockStepPlugin: Received Signal [" << _sig << "]"
           << std::endl;
     this->signal = _sig;
+}
+
+//////////////////////////////////////////////////
+void LockStepPlugin::Impl::PublishLockStepComplete(
+    const std::chrono::steady_clock::duration &_simTime)
+{
+  auto simTimeSecNsec = math::durationToSecNsec(_simTime);
+  msgs::Time msg;
+  msg.set_sec(simTimeSecNsec.first);
+  msg.set_nsec(simTimeSecNsec.second);
+  this->stepCompletePub.Publish(msg);
+  gzdbg << "LockStepPlugin: Send Lock Step Complete "
+        << "["
+        << msg.sec() << "s, "
+        << msg.nsec() << "ns"
+        << "]"
+        << std::endl;
 }
 
 //////////////////////////////////////////////////
@@ -183,24 +216,24 @@ void LockStepPlugin::Configure(
       &LockStepPlugin::Impl::OnEnable, this->impl.get());
 
   gzdbg << "LockStepPlugin subscribing to messages on "
-         << "[" << enableTopic << "]"
-         << std::endl;
+        << "[" << enableTopic << "]"
+        << std::endl;
 
   this->impl->node.Subscribe(
       startTopic,
       &LockStepPlugin::Impl::OnStart, this->impl.get());
 
   gzdbg << "LockStepPlugin subscribing to messages on "
-         << "[" << startTopic << "]"
-         << std::endl;
+        << "[" << startTopic << "]"
+        << std::endl;
 
   // Publishers
   this->impl->stepCompletePub =
       this->impl->node.Advertise<msgs::Time>(completeTopic);
 
   gzdbg << "LockStepPlugin publishing messages on "
-         << "[" << completeTopic << "]"
-         << std::endl;
+        << "[" << completeTopic << "]"
+        << std::endl;
 
   // Signal handler
   this->impl->sigHandler.AddCallback(
@@ -218,7 +251,7 @@ void LockStepPlugin::PreUpdate(
     const UpdateInfo &_info,
     EntityComponentManager &_ecm)
 {
-  using namespace std::literals;
+  using namespace std::chrono_literals;
 
   GZ_PROFILE("LockStepPlugin::PreUpdate");
 
@@ -227,21 +260,49 @@ void LockStepPlugin::PreUpdate(
     return;
   }
 
-  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime
-      && this->impl->enableLockStep)
+  // Ensure that when lock-step is enabled, it always starts in PreUpdate.
+  if (this->impl->enableLockStep && !this->impl->isLockStep)
+  {
+    this->impl->isLockStep = true;
+    gzdbg << "LockStepPlugin: Initiate Lock-Stepping." << std::endl;
+  }
+
+  if (!this->impl->isLockStep)
+  {
+    return;
+  }
+
+  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime)
+  // if (!_info.paused)
   {
     while (!this->impl->startStep)
     {
-      // SIGNINT should interrupt this loop.
-      if (this->impl->signal != 0)
+      // Break if lock-step disabled.
+      if (!this->impl->enableLockStep)
       {
+        gzdbg << "LockStepPlugin: Lock-Step Disabled." << std::endl;
         break;
       }
-      std::this_thread::sleep_for(100us);
+
+      // Break on SIGNINT.
+      if (this->impl->signal != 0)
+      {
+        gzdbg << "LockStepPlugin: SIGNINT." << std::endl;
+        break;
+      }
+      std::this_thread::sleep_for(1us);
     }
     {
       std::lock_guard<std::mutex> lock(this->impl->startStepMutex);
       this->impl->startStep = false;
+
+      auto simTimeSecNsec = math::durationToSecNsec(_info.simTime);
+      gzdbg << "LockStepPlugin: PreUpdate Complete: "
+            << "["
+            << simTimeSecNsec.first << "s, "
+            << simTimeSecNsec.second << "ns"
+            << "]"
+            << std::endl;
     }
   }
 }
@@ -253,16 +314,37 @@ void LockStepPlugin::PostUpdate(
 {
   GZ_PROFILE("LockStepPlugin::PostUpdate");
 
-  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime
-      && this->impl->enableLockStep)
+  if (!this->impl->isValidConfig)
+  {
+    return;
+  }
+
+  if (!this->impl->isLockStep)
+  {
+    return;
+  }
+
+  // Ensure that when lock-step is disabled, it always stops in PostUpdate.
+  if (!this->impl->enableLockStep)
+  {
+    this->impl->isLockStep = false;
+    gzdbg << "LockStepPlugin: Terminate Lock-Stepping." << std::endl;
+  }
+
+  if (!_info.paused && _info.simTime > this->impl->lastUpdateSimTime)
+  // if (!_info.paused)
   {
     this->impl->lastUpdateSimTime = _info.simTime;
+    this->impl->PublishLockStepComplete(_info.simTime);
 
     auto simTimeSecNsec = math::durationToSecNsec(_info.simTime);
-    msgs::Time stepCompleteMsg;
-    stepCompleteMsg.set_sec(simTimeSecNsec.first);
-    stepCompleteMsg.set_nsec(simTimeSecNsec.second);
-    this->impl->stepCompletePub.Publish(stepCompleteMsg);
+    gzdbg << "LockStepPlugin: PostUpdate Complete: "
+          << "["
+          << simTimeSecNsec.first << "s, "
+          << simTimeSecNsec.second << "ns"
+          << "]\n"
+          << std::endl;
+
   }
 }
 
