@@ -28,13 +28,13 @@
       <!-- <collision name="collision_1">
         <pose>0 9.95 10 0 0 0</pose>
         <geometry>
-          <box><size>20 0.1 20</size></box>
+          <box><size>20 0.1 0.2</size></box>
         </geometry>
       </collision> -->
       <visual name="visual_1">
         <pose>0 9.95 10 0 0 0</pose>
         <geometry>
-          <box><size>20 0.1 20</size></box>
+          <box><size>20 0.1 0.2</size></box>
         </geometry>
         <material>
           <ambient>0 1 0 0.3</ambient>
@@ -45,13 +45,13 @@
       <!-- <collision name="collision_2">
         <pose>0 -9.95 10 0 0 0</pose>
         <geometry>
-          <box><size>20 0.1 20</size></box>
+          <box><size>20 0.1 0.2</size></box>
         </geometry>
       </collision> -->
       <visual name="visual_2">
         <pose>0 -9.95 10 0 0 0</pose>
         <geometry>
-          <box><size>20 0.1 20</size></box>
+          <box><size>20 0.1 0.2</size></box>
         </geometry>
         <material>
           <ambient>0 1 0 0.3</ambient>
@@ -62,13 +62,13 @@
       <!-- <collision name="collision_3">
         <pose>9.95 0 10 0 0 0</pose>
         <geometry>
-          <box><size>0.1 19.8 20</size></box>
+          <box><size>0.1 19.8 0.2</size></box>
         </geometry>
       </collision> -->
       <visual name="visual_3">
         <pose>9.95 0 10 0 0 0</pose>
         <geometry>
-          <box><size>0.1 19.8 20</size></box>
+          <box><size>0.1 19.8 0.2</size></box>
         </geometry>
         <material>
           <ambient>0 1 0 0.3</ambient>
@@ -79,13 +79,13 @@
       <!-- <collision name="collision_4">
         <pose>-9.95 0 10 0 0 0</pose>
         <geometry>
-          <box><size>0.1 19.8 20</size></box>
+          <box><size>0.1 19.8 0.2</size></box>
         </geometry>
       </collision> -->
       <visual name="visual_4">
         <pose>-9.95 0 10 0 0 0</pose>
         <geometry>
-          <box><size>0.1 19.8 20</size></box>
+          <box><size>0.1 19.8 0.2</size></box>
         </geometry>
         <material>
           <ambient>0 1 0 0.3</ambient>
