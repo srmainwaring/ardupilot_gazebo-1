@@ -154,28 +154,27 @@ public:
 
     // Setup SITL connections
     this->_init_sockets();
+    
+    // fill json data with default
+    this->_create_default_json();
   }
 
   void run()
   {
     using namespace std::chrono_literals;
 
+    // wait for topics to register
+    std::this_thread::sleep_for(100ms);
+
+    // Enable lock step
+    gz::msgs::Boolean enable_lock_step_msg;
+    enable_lock_step_msg.set_data(true);
+    this->enable_lock_step_pub.Publish(enable_lock_step_msg);
+    std::cout << "Send Lock Step Enable" << std::endl;
+
     uint64_t count = 0;
     while (true)
     {
-      // Has the clock updated?
-      {
-        std::lock_guard<std::mutex> lock(this->clock_mutex);
-        this->timestamp = this->clock_msg.sim().sec()
-            + 1.0e-9 * this->clock_msg.sim().nsec();      
-      }
-      if (this->prev_timestamp >= this->timestamp)
-      {
-        std::this_thread::sleep_for(100us);
-        continue;
-      }
-      this->prev_timestamp = this->timestamp;
-
       // Pre-update
       if (this->update_state == UpdateState::PREUPDATE)
       {
@@ -184,7 +183,25 @@ public:
         if (result)
         {
           this->_send_commands();
-          this->update_state = UpdateState::POSTUPDATE;
+          // this->update_state = UpdateState::POSTUPDATE;
+          
+          // Step
+          // this->start_lock_step_pub.Publish(this->clock_msg.sim());
+          auto sim_time_sec_nsec =
+              gz::math::durationToSecNsec(this->last_update_sim_time);
+          gz::msgs::Time msg;
+          msg.set_sec(sim_time_sec_nsec.first);
+          msg.set_nsec(sim_time_sec_nsec.second);
+          this->start_lock_step_pub.Publish(msg);
+          std::cout << "Send Lock Step Start: "
+                    << "["
+                    << msg.sec() << "s, "
+                    << msg.nsec() << "ns"
+                    << "]"
+                    << std::endl;
+
+          this->update_state = UpdateState::WAIT;
+          std::cout << "Complete PreUpdate [" << count << "]"<< std::endl;
         }
       }
 
@@ -196,10 +213,12 @@ public:
         this->_send_state();
 
         this->update_state = UpdateState::PREUPDATE;
+        std::cout << "Complete PostUpdate [" << count << "]"<< std::endl;
+
+        count++;
       }
 
-      // std::cout << "Step: " << count << std::endl;
-      count++;
+      // std::this_thread::sleep_for(1us);
     }
   }
 
@@ -370,6 +389,12 @@ private:
     this->node.Subscribe(this->pose_topic, &ArduPilotGazeboBridge::_pose_cb, this);
     std::cout << "Subscribing to Pose_V on: " << this->pose_topic << std::endl;
 
+    // gz.msgs.Time
+    // /model/iris_with_ardupilot_1/lock_step/complete
+    this->complete_lock_step_topic = std::string("/model/").append(this->model_name).append("/lock_step/complete");
+    this->node.Subscribe(this->complete_lock_step_topic, &ArduPilotGazeboBridge::_complete_lock_step_cb, this);
+    std::cout << "Subscribing to Time on: " << this->complete_lock_step_topic << std::endl;
+
     // gz.msgs.IMU
     // /world/runway/model/r1_rover/link/imu_link/sensor/imu_sensor/imu
     auto imu_split = gz::common::split(this->plugin.imu_name, "::");
@@ -399,12 +424,23 @@ private:
     this->node.Subscribe(this->imu_topic, &ArduPilotGazeboBridge::_imu_cb, this);
     std::cout << "Subscribing to IMU on: " << this->imu_topic << std::endl;
 
-    // Commands
+    // Lock-step publishers
+    this->enable_lock_step_topic = std::string("/model/").append(this->model_name).append("/lock_step/enable");
+    this->enable_lock_step_pub = this->node.Advertise<gz::msgs::Boolean>(this->enable_lock_step_topic);
+    std::cout << "Advertising messages on "
+              << this->enable_lock_step_topic << std::endl;
+
+    this->start_lock_step_topic = std::string("/model/").append(this->model_name).append("/lock_step/start");
+    this->start_lock_step_pub = this->node.Advertise<gz::msgs::Time>(this->start_lock_step_topic);
+    std::cout << "Advertising messages on "
+              << this->start_lock_step_topic << std::endl;
+
+    // Command publishers
     for (const auto &control : this->controls)
     {
       this->command_pubs.emplace_back(this->node.Advertise<gz::msgs::Double>(control.cmd_topic));
       std::cout << "Advertising command for channel " << control.channel
-                << " on: " << control.cmd_topic << std::endl;      
+                << " on: " << control.cmd_topic << std::endl;
     }
   }
 
@@ -525,8 +561,8 @@ private:
                 {
                     this->ardupilot_online = false;
                     std::cout << "[" << this->model_name << "] "
-                        << "Broken ArduPilot connection,"
-                        << " resetting motor control.\n";
+                              << "Broken ArduPilot connection,"
+                              << " resetting motor control.\n";
                     //! @todo implement reset
                     // this->ResetPIDs();
                 }
@@ -606,8 +642,8 @@ private:
         && this->ardupilot_online)
     {
         std::cout << "Missed "
-            << pkt_frame_count - this->fcu_frame_count
-            << " input frames" << std::endl;
+                  << pkt_frame_count - this->fcu_frame_count
+                  << " input frames" << std::endl;
     }
 
     // update frame count
@@ -658,15 +694,76 @@ private:
     }
   }
 
-  void _create_state_json()
+  void _create_default_json()
   {
+    // Build JSON document
+    rapidjson::StringBuffer string_buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(string_buf);
+
+    writer.StartObject();
+
+    writer.Key("timestamp");
+    writer.Double(0.0);
+
+    writer.Key("imu");
+    writer.StartObject();
+    writer.Key("gyro");
+    writer.StartArray();
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.EndArray();
+    writer.Key("accel_body");
+    writer.StartArray();
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.EndArray();
+    writer.EndObject();
+
+    writer.Key("position");
+    writer.StartArray();
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.EndArray();
+
+    // ArduPilot quaternion convention: q[0] = 1 for identity.
+    writer.Key("quaternion");
+    writer.StartArray();
+    writer.Double(1.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.EndArray();
+
+    writer.Key("velocity");
+    writer.StartArray();
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.Double(0.0);
+    writer.EndArray();
+
+    writer.EndObject();
+
+    // Get JSON string
+    this->json_data = "\n" + std::string(string_buf.GetString()) + "\n";
+  }
+
+  bool _create_state_json()
+  {
+    // Convert timestamp to double 
+    double timestamp =
+        std::chrono::duration_cast<std::chrono::duration<double>>(
+            this->last_update_sim_time).count();
+
     gz::msgs::IMU imu_msg_;
     {
         std::lock_guard<std::mutex> lock(this->imu_mutex);
         // Wait until we've received a valid message.
         if (!this->imu_msg_valid)
         {
-            return;
+            return false;
         }
         imu_msg_ = this->imu_msg;
     }
@@ -714,7 +811,7 @@ private:
 
     gz::math::Vector3d world_pos;
     gz::math::Quaterniond world_rot;
-    double world_pos_timestamp{0.0};
+    double world_pos_timestamp{};
     for (const auto &pose : pose_msg_.pose())
     {
       // Filter for the model
@@ -729,9 +826,13 @@ private:
           pose.orientation().x(),
           pose.orientation().y(),
           pose.orientation().z());
-        world_pos_timestamp = pose.header().stamp().sec()
-            + 1.0e-9 * pose.header().stamp().nsec();
-      }
+
+        auto world_pos_duration = gz::math::secNsecToDuration(
+            pose.header().stamp().sec(), pose.header().stamp().nsec());
+        world_pos_timestamp =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
+                world_pos_duration).count();
+        }
     }
     gz::math::Pose3d worldPose(world_pos, world_rot);
     gz::math::Vector3d worldLinearVel;
@@ -745,8 +846,13 @@ private:
           pose.position().x(),
           pose.position().y(),
           pose.position().z());
-        double prev_world_pos_timestamp = pose.header().stamp().sec()
-            + 1.0e-9 * pose.header().stamp().nsec();
+
+        auto prev_world_pos_duration = gz::math::secNsecToDuration(
+            pose.header().stamp().sec(), pose.header().stamp().nsec());
+        double prev_world_pos_timestamp =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
+                prev_world_pos_duration).count();
+
         double dt = world_pos_timestamp - prev_world_pos_timestamp;
         double dx = world_pos.X() - prev_world_pos.X();
         double dy = world_pos.Y() - prev_world_pos.Y();
@@ -754,11 +860,15 @@ private:
         worldLinearVel = gz::math::Vector3d(dx/dt, dy/dt, dz/dt);
 
         std::cout << "worldLinearVel: dt: " << dt
-            << " dx: " << dx
-            << " dy: " << dy
-            << " dz: " << dz
-            << " v: " << worldLinearVel
-            << std::endl;
+                  << " dx: " << dx
+                  << " dy: " << dy
+                  << " dz: " << dz
+                  << " v: " << worldLinearVel
+                  << std::endl;
+        if (dt < 0.001)
+        {
+          return false;
+        }
       }
     }
 
@@ -786,7 +896,7 @@ private:
     writer.StartObject();
 
     writer.Key("timestamp");
-    writer.Double(this->timestamp);
+    writer.Double(timestamp);
 
     writer.Key("imu");
     writer.StartObject();
@@ -840,6 +950,7 @@ private:
     //           << ", pitch: " << wldAToBdyA.Rot().Pitch()
     //           << ", yaw: " << wldAToBdyA.Rot().Pitch()
     //           << std::endl;
+    return true;
   }
 
   void _send_state()
@@ -892,10 +1003,26 @@ private:
     // std::cout << this->pose_msg.DebugString() << std::endl;
   }
 
+  void _complete_lock_step_cb(const gz::msgs::Time &_msg)
+  {
+    std::lock_guard<std::mutex> lock(this->complete_lock_step_mutex);
+    this->last_update_sim_time = gz::math::secNsecToDuration(
+        _msg.sec(), _msg.nsec());
+    this->update_state = UpdateState::POSTUPDATE;
+    // std::cout << _msg.DebugString() << std::endl;
+    std::cout << "Received Lock Step Complete"
+              << "["
+              << _msg.sec() << "s, "
+              << _msg.nsec() << "ns"
+              << "]"
+              << std::endl;
+  }
+
   enum class UpdateState
   {
-    PREUPDATE = 0,
-    POSTUPDATE = 1
+    WAIT = 0,
+    PREUPDATE = 1,
+    POSTUPDATE = 2
   };
 
   // Configuration
@@ -933,11 +1060,8 @@ private:
   // Stats
   uint32_t frame_count{0};
   uint32_t print_frame_count{0};
-  double pre_update_prev_time;
-  double post_update_prev_time;
 
-  double timestamp{0.0};
-  double prev_timestamp{0.0};
+  std::chrono::steady_clock::duration last_update_sim_time{};
 
   // Payload
   std::string json_data;
@@ -948,6 +1072,12 @@ private:
   std::vector<Control> controls;
   std::vector<gz::transport::Node::Publisher> command_pubs;
 
+  gz::transport::Node::Publisher enable_lock_step_pub;
+  std::string enable_lock_step_topic;
+
+  gz::transport::Node::Publisher start_lock_step_pub;
+  std::string start_lock_step_topic;
+
   gz::msgs::Clock clock_msg;
   std::string clock_topic;
   std::mutex clock_mutex;
@@ -957,18 +1087,19 @@ private:
   gz::msgs::IMU imu_msg;
   std::string imu_topic;
   std::mutex imu_mutex;
-  // std::chrono::steady_clock::duration imu_prev_recv_time{0};
 
   gz::msgs::Odometry odometry_msg;
   std::string odometry_topic;
   std::mutex odometry_mutex;
-  // std::chrono::steady_clock::duration odometry_prev_recv_time{0};
 
   gz::msgs::Pose_V pose_msg;
   gz::msgs::Pose_V prev_pose_msg;
   std::string pose_topic;
   std::mutex pose_mutex;
-  // std::chrono::steady_clock::duration pose_prev_recv_time{0};
+
+  gz::msgs::Time complete_lock_step_msg;
+  std::string complete_lock_step_topic;
+  std::mutex complete_lock_step_mutex;
 
   // Track update state
   UpdateState update_state{UpdateState::PREUPDATE};
