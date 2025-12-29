@@ -319,7 +319,27 @@ Interface
 
 - Why does sim_time not reset when server restarts if the gui is running?
 
-## Multi-vehicle issues
+## Lock Step Plugin
+
+Message order
+
+```bash
+LockStepPlugin: Received Enable Lock Step: [1]
+LockStepPlugin: Initiate Lock-Stepping
+
+LockStepPlugin: Received Lock Step Start [sec, nsec]
+LockStepPlugin: PreUpdate Complete
+LockStepPlugin: Send Lock Step Complete [sec, nsec]
+LockStepPlugin: PostUpdate Complete
+```
+
+Working, but slow. The issue is that plugins are run by each secondary...
+So we are back to the same problem that we have with the ArduPilot Plugin.
+
+
+
+
+
 
 ### Fail to load default parameters
 
