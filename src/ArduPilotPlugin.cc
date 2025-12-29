@@ -43,6 +43,13 @@
 #include <gz/sim/components/LinearVelocity.hh>
 #include <gz/sim/components/Link.hh>
 #include <gz/sim/components/Name.hh>
+
+// >>>>> DISTRIBUTED <<<<<
+#include "gz/sim/components/Performer.hh"
+#include "gz/sim/components/PerformerAffinity.hh"
+#include "gz/sim/components/PerformerLevels.hh"
+// >>>>> DISTRIBUTED <<<<<
+
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/Sensor.hh>
 #include <gz/sim/components/World.hh>
@@ -377,6 +384,13 @@ class gz::sim::systems::ArduPilotPluginPrivate
       gzdbg << "Plugin received signal[" << _sig  << "]\n";
       this->signal = _sig;
   }
+
+  // >>>>> DISTRIBUTED <<<<<
+  public: sdf::ElementPtr sdfClone;
+  public: bool isSocketInitialised{false};
+  public: bool isDistributed{false};
+  public: Entity performerEntity{kNullEntity};
+  // >>>>> DISTRIBUTED <<<<<
 };
 
 /////////////////////////////////////////////////
@@ -444,7 +458,8 @@ void gz::sim::systems::ArduPilotPlugin::Configure(
     gz::sim::EventManager &/*&_eventMgr*/)
 {
   // Make a clone so that we can call non-const methods
-  sdf::ElementPtr sdfClone = _sdf->Clone();
+  // sdf::ElementPtr sdfClone = _sdf->Clone();
+  this->dataPtr->sdfClone = _sdf->Clone();
 
   this->dataPtr->model = gz::sim::Model(_entity);
   if (!this->dataPtr->model.Valid(_ecm))
@@ -454,6 +469,51 @@ void gz::sim::systems::ArduPilotPlugin::Configure(
     return;
   }
   this->dataPtr->modelName = this->dataPtr->model.Name(_ecm);
+
+  // >>>>> DISTRIBUTED <<<<<
+
+  auto performerEntities = _ecm.ChildrenByComponents(
+      this->dataPtr->model.Entity(), components::Performer());
+
+  if (performerEntities.empty())
+  {
+    gzmsg << "Model: [" << this->dataPtr->modelName << "] "
+          << "is not a performer" <<  std::endl;
+  }
+  else if (performerEntities.size() > 1)
+  {
+    gzerr << "Model: [" << this->dataPtr->modelName << "] "
+          << "is associated with multiple performers. "
+          << "System incorrectly configured and will not be updated."
+          <<  std::endl;
+    return;
+  }
+  else
+  {
+    this->dataPtr->performerEntity = performerEntities[0];
+    gzmsg << "Model: [" << this->dataPtr->modelName << "] "
+          << "is a performer" <<  std::endl;
+  }
+
+  if (this->dataPtr->performerEntity != kNullEntity)
+  {
+    auto performerRef = _ecm.Component<components::PerformerRef>(
+        this->dataPtr->performerEntity);
+    auto performerName = _ecm.Component<components::Name>(
+        this->dataPtr->performerEntity);
+
+    if (performerName == nullptr || performerRef == nullptr)
+    {
+      this->dataPtr->performerEntity = kNullEntity;
+      gzerr << "Model: [" << this->dataPtr->modelName << "] "
+            << "has an incorrectly configured performer."
+            << "System will not be updated."
+            << std::endl;
+      return;
+    }
+  }
+
+  // >>>>> DISTRIBUTED <<<<<
 
   this->dataPtr->world = gz::sim::World(
       _ecm.EntityByComponents(components::World()));
@@ -472,46 +532,51 @@ void gz::sim::systems::ArduPilotPlugin::Configure(
   // to the aerospace convention: x-forward, y-left, z-up
   this->dataPtr->modelXYZToAirplaneXForwardZDown =
     gz::math::Pose3d(0, 0, 0, GZ_PI, 0, 0);
-  if (sdfClone->HasElement("modelXYZToAirplaneXForwardZDown"))
+  if (this->dataPtr->sdfClone->HasElement("modelXYZToAirplaneXForwardZDown"))
   {
     this->dataPtr->modelXYZToAirplaneXForwardZDown =
-        sdfClone->Get<gz::math::Pose3d>("modelXYZToAirplaneXForwardZDown");
+        this->dataPtr->sdfClone->Get<gz::math::Pose3d>(
+            "modelXYZToAirplaneXForwardZDown");
   }
 
   // gazeboXYZToNED: from gazebo model frame: x-forward, y-right, z-down
   // to the aerospace convention: x-forward, y-left, z-up
   this->dataPtr->gazeboXYZToNED = gz::math::Pose3d(0, 0, 0, GZ_PI, 0, 0);
-  if (sdfClone->HasElement("gazeboXYZToNED"))
+  if (this->dataPtr->sdfClone->HasElement("gazeboXYZToNED"))
   {
     this->dataPtr->gazeboXYZToNED =
-        sdfClone->Get<gz::math::Pose3d>("gazeboXYZToNED");
+        this->dataPtr->sdfClone->Get<gz::math::Pose3d>("gazeboXYZToNED");
   }
 
   // Load control channel params
-  this->LoadControlChannels(sdfClone, _ecm);
+  this->LoadControlChannels(this->dataPtr->sdfClone, _ecm);
 
   // Load sensor params
-  this->LoadImuSensors(sdfClone, _ecm);
-  this->LoadGpsSensors(sdfClone, _ecm);
-  this->LoadRangeSensors(sdfClone, _ecm);
-  this->LoadWindSensors(sdfClone, _ecm);
+  this->LoadImuSensors(this->dataPtr->sdfClone, _ecm);
+  this->LoadGpsSensors(this->dataPtr->sdfClone, _ecm);
+  this->LoadRangeSensors(this->dataPtr->sdfClone, _ecm);
+  this->LoadWindSensors(this->dataPtr->sdfClone, _ecm);
 
+  // >>>>> DISTRIBUTED <<<<<
+  // In distributed calculations this must be deferred to update
+  // as we need to know if the server is a primary or secondary.
   // Initialise sockets
-  if (!InitSockets(sdfClone))
-  {
-    return;
-  }
+  // if (!InitSockets(this->dataPtr->sdfClone))
+  // {
+  //   return;
+  // }
+  // >>>>> DISTRIBUTED <<<<<
 
   // Missed update count before we declare arduPilotOnline status false
   this->dataPtr->connectionTimeoutMaxCount =
-    sdfClone->Get("connectionTimeoutMaxCount", 10).first;
+    this->dataPtr->sdfClone->Get("connectionTimeoutMaxCount", 10).first;
 
   // Enforce lock-step simulation (has default: false)
   this->dataPtr->isLockStep =
-    sdfClone->Get("lock_step", this->dataPtr->isLockStep).first;
+    this->dataPtr->sdfClone->Get("lock_step", this->dataPtr->isLockStep).first;
 
   this->dataPtr->have32Channels =
-    sdfClone->Get("have_32_channels", false).first;
+    this->dataPtr->sdfClone->Get("have_32_channels", false).first;
 
   // Add the signal handler
   this->dataPtr->sigHandler.AddCallback(
@@ -1008,6 +1073,29 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
     const gz::sim::UpdateInfo &_info,
     gz::sim::EntityComponentManager &_ecm)
 {
+    // >>>>> DISTRIBUTED <<<<<
+    auto performerAffinity = _ecm.Component<components::PerformerAffinity>(
+        this->dataPtr->performerEntity);
+
+    if (this->dataPtr->performerEntity != kNullEntity &&
+        (performerAffinity == nullptr ||
+        performerAffinity->Data() != _info.secondaryNamespace))
+    {
+        // This server instance does not have affinity in distributed mode.
+        return;
+    }
+    // >>>>> DISTRIBUTED <<<<<
+
+    if (!this->dataPtr->isSocketInitialised)
+    {
+      this->dataPtr->isSocketInitialised = InitSockets(this->dataPtr->sdfClone);
+      return;
+      // if (!InitSockets(this->dataPtr->sdfClone))
+      // {
+      //   return;
+      // }
+    }
+
     static bool calledInitAnemometerOnce{false};
     if (!this->dataPtr->anemometerName.empty() &&
         !this->dataPtr->anemometerInitialized &&
@@ -1229,6 +1317,19 @@ void gz::sim::systems::ArduPilotPlugin::PostUpdate(
     const gz::sim::UpdateInfo &_info,
     const gz::sim::EntityComponentManager &_ecm)
 {
+    // >>>>> DISTRIBUTED <<<<<
+    auto performerAffinity = _ecm.Component<components::PerformerAffinity>(
+        this->dataPtr->performerEntity);
+
+    if (this->dataPtr->performerEntity != kNullEntity &&
+        (performerAffinity == nullptr ||
+        performerAffinity->Data() != _info.secondaryNamespace))
+    {
+        // This server instance does not have affinity in distributed mode.
+        return;
+    }
+    // >>>>> DISTRIBUTED <<<<<
+
     std::lock_guard<std::mutex> lock(this->dataPtr->mutex);
 
     // Publish the new state.
