@@ -266,21 +266,21 @@
       <pose degrees="true">0 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_1</name>
     </include>
-    <!-- <include>
+    <include>
       <uri>model://iris_with_ardupilot_2</uri>
-      <pose degrees="true">10 0 0.2 0 0 90</pose>
+      <pose degrees="true">5 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_2</name>
-    </include> -->
-    <!-- <include>
+    </include>
+    <include>
       <uri>model://iris_with_ardupilot_3</uri>
-      <pose degrees="true">20 0 0.2 0 0 90</pose>
+      <pose degrees="true">10 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_3</name>
-    </include> -->
-    <!-- <include>
+    </include>
+    <include>
       <uri>model://iris_with_ardupilot_4</uri>
-      <pose degrees="true">30 0 0.2 0 0 90</pose>
+      <pose degrees="true">15 0 0.2 0 0 90</pose>
       <name>iris_with_ardupilot_4</name>
-    </include> -->
+    </include>
 
     <!-- level plugin -->
     <plugin name="gz::sim" filename="dummy">
@@ -294,30 +294,30 @@
           </box>
         </geometry>
       </performer>
-      <!-- <performer name="perf_iris_with_ardupilot_2">
+      <performer name="perf_iris_with_ardupilot_2">
         <ref>iris_with_ardupilot_2</ref>
         <geometry>
           <box>
             <size>2 2 2</size>
           </box>
         </geometry>
-      </performer> -->
-      <!-- <performer name="perf_iris_with_ardupilot_3">
+      </performer>
+      <performer name="perf_iris_with_ardupilot_3">
         <ref>iris_with_ardupilot_3</ref>
         <geometry>
           <box>
             <size>2 2 2</size>
           </box>
         </geometry>
-      </performer> -->
-      <!-- <performer name="perf_iris_with_ardupilot_4">
+      </performer>
+      <performer name="perf_iris_with_ardupilot_4">
         <ref>iris_with_ardupilot_4</ref>
         <geometry>
           <box>
             <size>2 2 2</size>
           </box>
         </geometry>
-      </performer> -->
+      </performer>
 
       <!-- levels cannot be added at runtime (no service) -->
       <level name="level1">
