@@ -243,7 +243,7 @@
         <servo_min>1000</servo_min>
         <servo_max>2000</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_ardupilot_3/joint/rotor_0_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot_2/joint/rotor_0_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="1">
@@ -254,7 +254,7 @@
         <servo_min>1000</servo_min>
         <servo_max>2000</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_ardupilot_3/joint/rotor_1_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot_2/joint/rotor_1_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="2">
@@ -265,7 +265,7 @@
         <servo_min>1000</servo_min>
         <servo_max>2000</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_ardupilot_3/joint/rotor_2_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot_2/joint/rotor_2_joint/cmd_vel</cmd_topic>
       </control>
 
       <control channel="3">
@@ -276,7 +276,7 @@
         <servo_min>1000</servo_min>
         <servo_max>2000</servo_max>
         <type>COMMAND</type>
-        <cmd_topic>/model/iris_with_ardupilot_3/joint/rotor_3_joint/cmd_vel</cmd_topic>
+        <cmd_topic>/model/iris_with_ardupilot_2/joint/rotor_3_joint/cmd_vel</cmd_topic>
       </control>
 
     </plugin>
