@@ -388,7 +388,6 @@ class gz::sim::systems::ArduPilotPluginPrivate
   // >>>>> DISTRIBUTED <<<<<
   public: sdf::ElementPtr sdfClone;
   public: bool isSocketInitialised{false};
-  public: bool isDistributed{false};
   public: Entity performerEntity{kNullEntity};
   // >>>>> DISTRIBUTED <<<<<
 };
@@ -1077,7 +1076,8 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
     auto performerAffinity = _ecm.Component<components::PerformerAffinity>(
         this->dataPtr->performerEntity);
 
-    if (this->dataPtr->performerEntity != kNullEntity &&
+    if (_info.isDistributed &&
+        this->dataPtr->performerEntity != kNullEntity &&
         (performerAffinity == nullptr ||
         performerAffinity->Data() != _info.secondaryNamespace))
     {
@@ -1090,10 +1090,6 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
     {
       this->dataPtr->isSocketInitialised = InitSockets(this->dataPtr->sdfClone);
       return;
-      // if (!InitSockets(this->dataPtr->sdfClone))
-      // {
-      //   return;
-      // }
     }
 
     static bool calledInitAnemometerOnce{false};
@@ -1321,7 +1317,8 @@ void gz::sim::systems::ArduPilotPlugin::PostUpdate(
     auto performerAffinity = _ecm.Component<components::PerformerAffinity>(
         this->dataPtr->performerEntity);
 
-    if (this->dataPtr->performerEntity != kNullEntity &&
+    if (_info.isDistributed &&
+        this->dataPtr->performerEntity != kNullEntity &&
         (performerAffinity == nullptr ||
         performerAffinity->Data() != _info.secondaryNamespace))
     {
@@ -1411,7 +1408,8 @@ void gz::sim::systems::ArduPilotPlugin::ApplyMotorForces(
     if (this->dataPtr->controls[i].type == "COMMAND")
     {
       msgs::Double cmd;
-      cmd.set_data(this->dataPtr->controls[i].cmd);
+      double cmdData = this->dataPtr->controls[i].cmd;
+      cmd.set_data(cmdData);
       this->dataPtr->controls[i].pub.Publish(cmd);
       continue;
     }
@@ -1754,7 +1752,7 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                 {
                   this->dataPtr->controls[i].outputReady = false;
                   this->dataPtr->controls[i].cmd = 0.0;
-#if 0
+#if DEBUG_JSON_IO
                   gzdbg << "apply input chan["
                       << this->dataPtr->controls[i].channel
                       << "] to control chan[" << i
@@ -1772,7 +1770,7 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                   raw_cmd = gz::math::clamp(raw_cmd, 0.0, 1.0);
                   this->dataPtr->controls[i].cmd =
                       multiplier * (raw_cmd + offset);
-#if 0
+#if DEBUG_JSON_IO
                   gzdbg << "apply input chan["
                       << this->dataPtr->controls[i].channel
                       << "] to control chan[" << i
@@ -2105,7 +2103,9 @@ void gz::sim::systems::ArduPilotPlugin::CreateStateJSON(
 
     // get JSON
     this->dataPtr->json_str = "\n" + std::string(s.GetString()) + "\n";
-    // gzdbg << this->dataPtr->json_str << "\n";
+#if DEBUG_JSON_IO
+    gzdbg << this->dataPtr->json_str << "\n";
+#endif
 }
 
 /////////////////////////////////////////////////
