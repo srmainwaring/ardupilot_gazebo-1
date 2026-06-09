@@ -16,6 +16,7 @@ from dataclasses import dataclass
 GZ_VERSION_GARDEN = "garden"
 GZ_VERSION_HARMONIC = "harmonic"
 GZ_VERSION_IONIC = "ionic"
+GZ_VERSION_JETTY = "jetty"
 
 
 def gz_version():
@@ -47,6 +48,14 @@ elif gz_version() == GZ_VERSION_IONIC:
     from gz.msgs11.magnetometer_pb2 import Magnetometer
     from gz.msgs11.model_pb2 import Model
     from gz.msgs11.navsat_pb2 import NavSat
+elif gz_version() == GZ_VERSION_JETTY:
+    from gz.msgs.air_speed_pb2 import AirSpeed
+    from gz.msgs.altimeter_pb2 import Altimeter
+    from gz.msgs.battery_state_pb2 import BatteryState
+    from gz.msgs.fluid_pressure_pb2 import FluidPressure
+    from gz.msgs.magnetometer_pb2 import Magnetometer
+    from gz.msgs.model_pb2 import Model
+    from gz.msgs.navsat_pb2 import NavSat
 
 
 # Importing gz.transport into the module global scope causes an odd
@@ -58,6 +67,8 @@ def gz_node():
         from gz.transport13 import Node
     elif gz_version() == GZ_VERSION_IONIC:
         from gz.transport14 import Node
+    elif gz_version() == GZ_VERSION_JETTY:
+        from gz.transport import Node
 
     return Node()
 
@@ -106,6 +117,15 @@ class JointStatesConverter:
             return matches[0]
         else:
             return None
+
+    def joint_position(self, joint_name):
+        joint = self.joint_by_name(joint_name)
+        if joint is None:
+            return float("nan")
+
+        axis1 = joint.axis1
+        pos_rad = axis1.position
+        return pos_rad
 
     def joint_velocity(self, joint_name):
         joint = self.joint_by_name(joint_name)
@@ -288,12 +308,16 @@ class DroneCANNode:
         self._magnetic_field_ga = [0]
         self._gnss_fix2 = [None]
 
+        # TODO: dictionary: joint name : uavcan.equipment.actuator.Status
+        self._actuator_status = {}
+
         self._lock = threading.Lock()
         self._node = None
 
         self._esc_pub = None
         self._mag_pub = None
         self._gnss_fix2_pub = None
+        self._actuator_status_pub = None
 
         self._task_thread = threading.Thread(target=self._run)
         self._task_thread.start()
@@ -321,8 +345,9 @@ class DroneCANNode:
             self._mag_pub = self._node.periodic(
                 1.0 / rate, self._pub_magnetic_field_strength
             )
-            self._gnss_fix2_pub = self._node.periodic(
-                1.0 / rate, self._pub_gnss_fix2
+            self._gnss_fix2_pub = self._node.periodic(1.0 / rate, self._pub_gnss_fix2)
+            self._actuator_status_pub = self._node.periodic(
+                1.0 / rate, self._pub_actuator_status
             )
 
             # Set mode and health status
@@ -401,6 +426,14 @@ class DroneCANNode:
             if debug:
                 print(dronecan.to_yaml(msg))
 
+    def _pub_actuator_status(self):
+        with self._lock:
+            for key in self._actuator_status:
+                msg = self._actuator_status[key]
+                self._node.broadcast(msg)
+                if self._debug:
+                    print(dronecan.to_yaml(msg))
+
     def set_rpm(self, index, value):
         with self._lock:
             self._rpm[index] = value
@@ -412,6 +445,18 @@ class DroneCANNode:
     def set_gnss_fix2(self, index, value):
         with self._lock:
             self._gnss_fix2[index] = value
+
+    def set_actuator_status(self, joint_name, index, postion, speed):
+        msg = dronecan.uavcan.equipment.actuator.Status()
+        msg.actuator_id = index
+        msg.position = postion
+        msg.speed = speed
+        msg.force = float("nan")
+        msg.power_rating_pct = msg.POWER_RATING_PCT_UNKNOWN
+
+        with self._lock:
+            self._actuator_status[joint_name] = msg
+
 
 def main():
     # Command line args
@@ -475,6 +520,17 @@ def main():
         # NavSat
         gnss_fix2 = navsat.uavcan_equipment_gnss_fix2()
         dronecan_node.set_gnss_fix2(0, gnss_fix2)
+
+        # Actuator: position (rad), speed (rad/s)
+        act_pos0 = joint_states.joint_position("roll_joint")
+        act_pos1 = joint_states.joint_position("pitch_joint")
+        act_pos2 = joint_states.joint_position("yaw_joint")
+        act_speed0 = joint_states.joint_velocity("roll_joint")
+        act_speed1 = joint_states.joint_velocity("pitch_joint")
+        act_speed2 = joint_states.joint_velocity("yaw_joint")
+        dronecan_node.set_actuator_status("roll_joint", 0, act_pos0, act_speed0)
+        dronecan_node.set_actuator_status("pitch_joint", 1, act_pos1, act_speed1)
+        dronecan_node.set_actuator_status("yaw_joint", 2, act_pos2, act_speed2)
 
         time.sleep(0.01)
 
