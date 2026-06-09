@@ -522,15 +522,31 @@ def main():
         dronecan_node.set_gnss_fix2(0, gnss_fix2)
 
         # Actuator: position (rad), speed (rad/s)
-        act_pos0 = joint_states.joint_position("roll_joint")
-        act_pos1 = joint_states.joint_position("pitch_joint")
-        act_pos2 = joint_states.joint_position("yaw_joint")
-        act_speed0 = joint_states.joint_velocity("roll_joint")
-        act_speed1 = joint_states.joint_velocity("pitch_joint")
-        act_speed2 = joint_states.joint_velocity("yaw_joint")
-        dronecan_node.set_actuator_status("roll_joint", 0, act_pos0, act_speed0)
-        dronecan_node.set_actuator_status("pitch_joint", 1, act_pos1, act_speed1)
-        dronecan_node.set_actuator_status("yaw_joint", 2, act_pos2, act_speed2)
+        #           actuator_id is indexed 1, 2, 3, ...
+        # See: AP_DroneCAN/AP_DroneCAN.cpp L1417
+        # In this example the iris is assigned servos 9, 10, 11 to the gimbal.
+        #   SERVO9_FUNCTION  8           # Mount1Roll
+        #   SERVO10_FUNCTION 7           # Mount1Pitch
+        #   SERVO11_FUNCTION 6           # Mount1Yaw
+        # TODO: refactor to accept either a joint state, or the joint name.
+        dronecan_node.set_actuator_status(
+            "roll_joint",
+            9,
+            joint_states.joint_position("roll_joint"),
+            joint_states.joint_velocity("roll_joint"),
+        )
+        dronecan_node.set_actuator_status(
+            "pitch_joint",
+            10,
+            joint_states.joint_position("pitch_joint"),
+            joint_states.joint_velocity("pitch_joint"),
+        )
+        dronecan_node.set_actuator_status(
+            "yaw_joint",
+            11,
+            joint_states.joint_position("yaw_joint"),
+            joint_states.joint_velocity("yaw_joint"),
+        )
 
         time.sleep(0.01)
 
