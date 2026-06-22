@@ -1485,121 +1485,121 @@
       <imuName>base::imu_sensor</imuName>
       <control channel='0'>
         <jointName>l_hip_yaw</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='1'>
         <jointName>l_hip_roll</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='2'>
         <jointName>l_hip_pitch</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='3'>
         <jointName>l_knee</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='4'>
         <jointName>l_ank_pitch</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_pitch</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='5'>
         <jointName>l_ank_roll</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_roll</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='6'>
         <jointName>r_hip_yaw</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='7'>
         <jointName>r_hip_roll</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='8'>
         <jointName>r_hip_pitch</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='9'>
         <jointName>r_knee</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='10'>
         <jointName>r_ank_pitch</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_pitch</cmd_topic>
         <p_gain>2</p_gain>
       </control>
       <control channel='11'>
         <jointName>r_ank_roll</jointName>
-        <multiplier>1.0</multiplier>
+        <multiplier>3.14159</multiplier>
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>COMMAND</type>
+        <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_roll</cmd_topic>
         <p_gain>2</p_gain>
       </control>
