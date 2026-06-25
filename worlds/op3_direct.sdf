@@ -28,6 +28,7 @@
       </link>
     </model>
     <model name='robotis_op3'>
+    <pose>0 0 0.285 0 0 0</pose>
     <link name='base'>
       <inertial>
         <pose>-0.015010000000000001 0.00012999999999999999 0.065820000000000004 0 0 0</pose>
@@ -390,6 +391,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>-0.2618</initial_position>
         </dynamics>
       </axis>
     </joint>
@@ -458,6 +460,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>0.5236</initial_position>
         </dynamics>
       </axis>
     </joint>
@@ -526,6 +529,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>0.2618</initial_position>
         </dynamics>
       </axis>
     </joint>
@@ -1007,6 +1011,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>-0.2618</initial_position>
         </dynamics>
       </axis>
     </joint>
@@ -1075,6 +1080,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>0.5236</initial_position>
         </dynamics>
       </axis>
     </joint>
@@ -1143,6 +1149,7 @@
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
+        <initial_position>0.2618</initial_position>
         </dynamics>
       </axis>
     </joint>
