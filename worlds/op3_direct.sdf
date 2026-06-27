@@ -28,8 +28,8 @@
       </link>
     </model>
     <model name='robotis_op3'>
-      <static>false</static>
-      <pose>0 0 0.285 0.12 0 0</pose>
+      <static>true</static>
+      <pose>0 0 0.285 0 0 0</pose>
     <link name='base'>
       <inertial>
         <pose>-0.015010000000000001 0.00012999999999999999 0.065820000000000004 0 0 0</pose>
@@ -1521,7 +1521,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.2</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='1'>
         <jointName>l_hip_roll</jointName>
@@ -1531,7 +1538,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>300</p_gain>
+        <i_gain>0.5</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='2'>
         <jointName>l_hip_pitch</jointName>
@@ -1541,7 +1555,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>300</p_gain>
+        <i_gain>0.5</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='3'>
         <jointName>l_knee</jointName>
@@ -1551,7 +1572,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>200</p_gain>
+        <i_gain>0.2</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='4'>
         <jointName>l_ank_pitch</jointName>
@@ -1561,7 +1589,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_pitch</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='5'>
         <jointName>l_ank_roll</jointName>
@@ -1571,7 +1606,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_roll</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='6'>
         <jointName>r_hip_yaw</jointName>
@@ -1581,7 +1623,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.2</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='7'>
         <jointName>r_hip_roll</jointName>
@@ -1591,7 +1640,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>300</p_gain>
+        <i_gain>0.5</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='8'>
         <jointName>r_hip_pitch</jointName>
@@ -1601,7 +1657,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>300</p_gain>
+        <i_gain>0.5</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='9'>
         <jointName>r_knee</jointName>
@@ -1611,7 +1674,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>200</p_gain>
+        <i_gain>0.2</i_gain>
+        <d_gain>0.05</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='10'>
         <jointName>r_ank_pitch</jointName>
@@ -1621,7 +1691,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_pitch</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
       <control channel='11'>
         <jointName>r_ank_roll</jointName>
@@ -1631,7 +1708,14 @@
         <servo_max>1900</servo_max>
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_roll</cmd_topic>
-        <p_gain>2</p_gain>
+        <useForce>1</useForce>
+        <p_gain>150</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>0.03</d_gain>
+        <i_max>2</i_max>
+        <i_min>-2</i_min>
+        <cmd_max>500</cmd_max>
+        <cmd_min>-500</cmd_min>
       </control>
     </plugin>
     <frame name='base_fixed' attached_to='base'>
