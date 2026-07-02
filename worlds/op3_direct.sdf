@@ -3,7 +3,7 @@
   <world name="op3_direct">
     <physics name="1ms" type="ignore">
       <max_step_size>0.001</max_step_size>
-      <real_time_factor>1.0</real_time_factor>
+      <real_time_factor>0.2</real_time_factor>
     </physics>
     <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
     <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
@@ -17,7 +17,7 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
     <model name="ground_plane">
-      <static>true</static>
+      <static>false</static>
       <link name="link">
         <collision name="collision">
           <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
@@ -28,7 +28,7 @@
       </link>
     </model>
     <model name='robotis_op3'>
-      <static>true</static>
+      <static>false</static>
       <pose>0 0 0.285 0 0 0</pose>
     <link name='base'>
       <inertial>
@@ -96,7 +96,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -164,7 +164,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -252,7 +252,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -320,7 +320,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -388,7 +388,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -457,7 +457,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -526,7 +526,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -595,7 +595,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -668,7 +668,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -736,7 +736,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -804,7 +804,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -872,7 +872,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -940,7 +940,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1008,7 +1008,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1077,7 +1077,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1146,7 +1146,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1215,7 +1215,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1288,7 +1288,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1356,7 +1356,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1424,7 +1424,7 @@
           <velocity>100</velocity>
         </limit>
         <dynamics>
-          <damping>0.10000000000000001</damping>
+          <damping>0.01</damping>
           <friction>0</friction>
           <spring_reference>0</spring_reference>
           <spring_stiffness>0</spring_stiffness>
@@ -1509,7 +1509,8 @@
       <fdm_addr>127.0.0.1</fdm_addr>
       <fdm_port_in>9002</fdm_port_in>
       <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
-      <lock_step>0</lock_step>
+      <lock_step>1</lock_step>
+      <no_time_sync>1</no_time_sync>
       <modelXYZToAirplaneXForwardZDown degrees='true'>0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
       <gazeboXYZToNED degrees='true'>0 0 0 180 0 90</gazeboXYZToNED>
       <imuName>base::imu_sensor</imuName>
@@ -1522,12 +1523,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.2</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='1'>
@@ -1539,12 +1540,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>300</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.5</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='2'>
@@ -1556,12 +1557,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>300</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.5</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='3'>
@@ -1573,12 +1574,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>200</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.2</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='4'>
@@ -1590,12 +1591,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_pitch</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.1</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='5'>
@@ -1607,12 +1608,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_l_ank_roll</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.1</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='6'>
@@ -1624,12 +1625,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.2</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='7'>
@@ -1641,12 +1642,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>300</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.5</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='8'>
@@ -1658,12 +1659,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>300</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.5</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='9'>
@@ -1675,12 +1676,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>200</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.2</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='10'>
@@ -1692,12 +1693,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_pitch</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.1</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='11'>
@@ -1709,12 +1710,12 @@
         <type>POSITION</type>
         <cmd_topic>/op3/cmd_r_ank_roll</cmd_topic>
         <useForce>1</useForce>
-        <p_gain>150</p_gain>
+        <p_gain>100</p_gain>
         <i_gain>0.1</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
-        <cmd_max>500</cmd_max>
+        <cmd_max>10000</cmd_max>
         <cmd_min>-500</cmd_min>
       </control>
     </plugin>
