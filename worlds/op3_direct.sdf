@@ -3,7 +3,7 @@
   <world name="op3_direct">
     <physics name="1ms" type="ignore">
       <max_step_size>0.001</max_step_size>
-      <real_time_factor>0.2</real_time_factor>
+      <real_time_factor>1.0</real_time_factor>
     </physics>
     <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
     <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
@@ -17,7 +17,7 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
     <model name="ground_plane">
-      <static>true</static>
+      <static>false</static>
       <link name="link">
         <collision name="collision">
           <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
@@ -26,9 +26,9 @@
           <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
         </visual>
       </link>
-    </model>
+  </model>
     <model name='robotis_op3'>
-      <static>true</static>
+      <static>false</static>
       <pose>0 0 0.285 0 0.12 0</pose>
     <link name='base'>
       <inertial>
@@ -1509,7 +1509,7 @@
       <fdm_addr>127.0.0.1</fdm_addr>
       <fdm_port_in>9002</fdm_port_in>
       <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
-      <lock_step>1</lock_step>
+      <lock_step>0</lock_step>
       <no_time_sync>1</no_time_sync>
       <modelXYZToAirplaneXForwardZDown degrees='true'>0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
       <gazeboXYZToNED degrees='true'>0 0 0 180 0 90</gazeboXYZToNED>
@@ -1520,7 +1520,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1537,7 +1537,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1554,7 +1554,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1571,7 +1571,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1588,7 +1588,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_ank_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1605,7 +1605,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_ank_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1622,7 +1622,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1639,7 +1639,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1656,7 +1656,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1673,7 +1673,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1690,7 +1690,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_ank_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1707,7 +1707,7 @@
         <offset>-0.5</offset>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>
-        <type>POSITION</type>
+        <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_ank_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
@@ -1737,6 +1737,91 @@
     <frame name='cam_gazebo_link' attached_to='cam_gazebo'>
       <pose>0 0 0 0 0 0</pose>
     </frame>
+
+  
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_hip_yaw</joint_name>
+      <topic>/op3/cmd_l_hip_yaw</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_hip_roll</joint_name>
+      <topic>/op3/cmd_l_hip_roll</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_hip_pitch</joint_name>
+      <topic>/op3/cmd_l_hip_pitch</topic>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_knee</joint_name>
+      <topic>/op3/cmd_l_knee</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_ank_pitch</joint_name>
+      <topic>/op3/cmd_l_ank_pitch</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>l_ank_roll</joint_name>
+      <topic>/op3/cmd_l_ank_roll</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_hip_yaw</joint_name>
+      <topic>/op3/cmd_r_hip_yaw</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_hip_roll</joint_name>
+      <topic>/op3/cmd_r_hip_roll</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_hip_pitch</joint_name>
+      <topic>/op3/cmd_r_hip_pitch</topic>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_knee</joint_name>
+      <topic>/op3/cmd_r_knee</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_ank_pitch</joint_name>
+      <topic>/op3/cmd_r_ank_pitch</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>r_ank_roll</joint_name>
+      <topic>/op3/cmd_r_ank_roll</topic>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+    </plugin>
   </model>
   </world>
 </sdf>
