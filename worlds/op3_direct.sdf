@@ -3,7 +3,7 @@
   <world name="op3_direct">
     <physics name="1ms" type="ignore">
       <max_step_size>0.001</max_step_size>
-      <real_time_factor>1.0</real_time_factor>
+      <real_time_factor>0.2</real_time_factor>
     </physics>
     <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
     <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
@@ -17,7 +17,7 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
     <model name="ground_plane">
-      <static>false</static>
+      <static>true</static>
       <link name="link">
         <collision name="collision">
           <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
@@ -29,7 +29,7 @@
   </model>
     <model name='robotis_op3'>
       <static>false</static>
-      <pose>0 0 0.285 0 0.12 0</pose>
+      <pose>0 0 0.57 0 0 3.14159</pose>
     <link name='base'>
       <inertial>
         <pose>-0.015010000000000001 0.00012999999999999999 0.065820000000000004 0 0 0</pose>
@@ -1509,17 +1509,19 @@
       <fdm_addr>127.0.0.1</fdm_addr>
       <fdm_port_in>9002</fdm_port_in>
       <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
-      <lock_step>0</lock_step>
+      <lock_step>1</lock_step>
+      <have_32_channels>0</have_32_channels>
       <no_time_sync>1</no_time_sync>
       <modelXYZToAirplaneXForwardZDown degrees='true'>0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
       <gazeboXYZToNED degrees='true'>0 0 0 180 0 90</gazeboXYZToNED>
       <imuName>base::imu_sensor</imuName>
       <control channel='0'>
+        <channel>0</channel>
         <jointName>l_hip_yaw</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
         <useForce>1</useForce>
@@ -1532,11 +1534,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='1'>
+        <channel>1</channel>
         <jointName>l_hip_roll</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
         <useForce>1</useForce>
@@ -1549,11 +1552,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='2'>
+        <channel>2</channel>
         <jointName>l_hip_pitch</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
         <useForce>1</useForce>
@@ -1566,11 +1570,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='3'>
+        <channel>3</channel>
         <jointName>l_knee</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
         <useForce>1</useForce>
@@ -1583,11 +1588,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='4'>
+        <channel>4</channel>
         <jointName>l_ank_pitch</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_ank_pitch</cmd_topic>
         <useForce>1</useForce>
@@ -1600,11 +1606,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='5'>
+        <channel>5</channel>
         <jointName>l_ank_roll</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_l_ank_roll</cmd_topic>
         <useForce>1</useForce>
@@ -1617,11 +1624,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='6'>
+        <channel>6</channel>
         <jointName>r_hip_yaw</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
         <useForce>1</useForce>
@@ -1634,11 +1642,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='7'>
+        <channel>7</channel>
         <jointName>r_hip_roll</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
         <useForce>1</useForce>
@@ -1651,11 +1660,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='8'>
+        <channel>8</channel>
         <jointName>r_hip_pitch</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
         <useForce>1</useForce>
@@ -1668,11 +1678,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='9'>
+        <channel>9</channel>
         <jointName>r_knee</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
         <useForce>1</useForce>
@@ -1685,11 +1696,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='10'>
+        <channel>10</channel>
         <jointName>r_ank_pitch</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_ank_pitch</cmd_topic>
         <useForce>1</useForce>
@@ -1702,11 +1714,12 @@
         <cmd_min>-500</cmd_min>
       </control>
       <control channel='11'>
+        <channel>11</channel>
         <jointName>r_ank_roll</jointName>
-        <multiplier>3.14159</multiplier>
+        <multiplier>1.571</multiplier>
         <offset>-0.5</offset>
-        <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
         <type>COMMAND</type>
         <cmd_topic>/op3/cmd_r_ank_roll</cmd_topic>
         <useForce>1</useForce>
@@ -1743,84 +1756,84 @@
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_yaw</joint_name>
       <topic>/op3/cmd_l_hip_yaw</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_roll</joint_name>
       <topic>/op3/cmd_l_hip_roll</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_pitch</joint_name>
       <topic>/op3/cmd_l_hip_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_knee</joint_name>
       <topic>/op3/cmd_l_knee</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_ank_pitch</joint_name>
       <topic>/op3/cmd_l_ank_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_ank_roll</joint_name>
       <topic>/op3/cmd_l_ank_roll</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_yaw</joint_name>
       <topic>/op3/cmd_r_hip_yaw</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_roll</joint_name>
       <topic>/op3/cmd_r_hip_roll</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_pitch</joint_name>
       <topic>/op3/cmd_r_hip_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_knee</joint_name>
       <topic>/op3/cmd_r_knee</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_ank_pitch</joint_name>
       <topic>/op3/cmd_r_ank_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_ank_roll</joint_name>
       <topic>/op3/cmd_r_ank_roll</topic>
-      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.01</d_gain>
+      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
     </plugin>
   </model>
   </world>
