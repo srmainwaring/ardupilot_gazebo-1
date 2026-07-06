@@ -1653,14 +1653,14 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                 {
                   this->dataPtr->controls[i].outputReady = false;
                   this->dataPtr->controls[i].cmd = 0.0;
-#if 0
+//#if 0
                   gzdbg << "apply input chan["
                       << this->dataPtr->controls[i].channel
                       << "] to control chan[" << i
                       << "] with joint name ["
                       << this->dataPtr->controls[i].jointName
                       << "] vehicle not ready.\n";
-#endif
+//#endif
                 }
                 else
                 {
@@ -1671,7 +1671,7 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                   raw_cmd = gz::math::clamp(raw_cmd, 0.0, 1.0);
                   this->dataPtr->controls[i].cmd =
                       multiplier * (raw_cmd + offset);
-#if 0
+//#if 0
                   gzdbg << "apply input chan["
                       << this->dataPtr->controls[i].channel
                       << "] to control chan[" << i
@@ -1682,7 +1682,7 @@ void gz::sim::systems::ArduPilotPlugin::UpdateMotorCommands(
                       << "] raw cmd [" << raw_cmd
                       << "] adjusted cmd [" << this->dataPtr->controls[i].cmd
                       << "].\n";
-#endif
+//#endif
                 }
             }
             else
