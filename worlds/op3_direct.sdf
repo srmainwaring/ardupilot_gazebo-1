@@ -83,7 +83,7 @@
         <imu/>
       </sensor>
     </link>
-    <joint name='head_pan' type='revolute'>
+    <joint name='head_pan' type='fixed'>
       <pose relative_to='base'>-0.001 0 0.13650000000000001 0 0 0</pose>
       <parent>base</parent>
       <child>head_pan_link</child>
@@ -151,7 +151,7 @@
       </visual>
       <self_collide>false</self_collide>
     </link>
-    <joint name='head_tilt' type='revolute'>
+    <joint name='head_tilt' type='fixed'>
       <pose relative_to='head_pan_link'>0.01 0.019 0.028500000000000001 0 0 0</pose>
       <parent>head_pan_link</parent>
       <child>head_tilt_link</child>
@@ -1526,7 +1526,7 @@
         <cmd_topic>/op3/cmd_l_hip_yaw</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.2</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1544,7 +1544,7 @@
         <cmd_topic>/op3/cmd_l_hip_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.5</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1562,7 +1562,7 @@
         <cmd_topic>/op3/cmd_l_hip_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.5</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1580,7 +1580,7 @@
         <cmd_topic>/op3/cmd_l_knee</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.2</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1634,7 +1634,7 @@
         <cmd_topic>/op3/cmd_r_hip_yaw</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.2</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.03</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1652,7 +1652,7 @@
         <cmd_topic>/op3/cmd_r_hip_roll</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.5</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1670,7 +1670,7 @@
         <cmd_topic>/op3/cmd_r_hip_pitch</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.5</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1688,7 +1688,7 @@
         <cmd_topic>/op3/cmd_r_knee</cmd_topic>
         <useForce>1</useForce>
         <p_gain>100</p_gain>
-        <i_gain>0.2</i_gain>
+        <i_gain>0</i_gain>
         <d_gain>0.05</d_gain>
         <i_max>2</i_max>
         <i_min>-2</i_min>
@@ -1756,84 +1756,84 @@
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_yaw</joint_name>
       <topic>/op3/cmd_l_hip_yaw</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_roll</joint_name>
       <topic>/op3/cmd_l_hip_roll</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_hip_pitch</joint_name>
       <topic>/op3/cmd_l_hip_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_knee</joint_name>
       <topic>/op3/cmd_l_knee</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_ank_pitch</joint_name>
       <topic>/op3/cmd_l_ank_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>l_ank_roll</joint_name>
       <topic>/op3/cmd_l_ank_roll</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_yaw</joint_name>
       <topic>/op3/cmd_r_hip_yaw</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_roll</joint_name>
       <topic>/op3/cmd_r_hip_roll</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_hip_pitch</joint_name>
       <topic>/op3/cmd_r_hip_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_knee</joint_name>
       <topic>/op3/cmd_r_knee</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_ank_pitch</joint_name>
       <topic>/op3/cmd_r_ank_pitch</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
 
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>r_ank_roll</joint_name>
       <topic>/op3/cmd_r_ank_roll</topic>
-      <p_gain>100</p_gain><i_gain>0.5</i_gain><d_gain>0.05</d_gain>
+      <p_gain>100</p_gain><i_gain>0</i_gain><d_gain>0.05</d_gain>
     </plugin>
   </model>
   </world>
