@@ -5,7 +5,6 @@ GSoC 2026 -- Neeta Misericordia
 ## Requirements
 
 - Ubuntu 24.04
-- ROS2 Jazzy
 - Gazebo Harmonic 8.11
 - ArduPilot SITL (Python venv)
 - GZ_IP=127.0.0.1 in ~/.bashrc (prevents multicast flooding WiFi)
