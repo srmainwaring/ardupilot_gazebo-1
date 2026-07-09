@@ -81,8 +81,7 @@ Watch for AP_Biomimetic: standing in the console. Gait starts immediately after.
 
 The SDF has real_time_factor=0.2 but this is not intentional -- it reflects
 Gazebo struggling to keep up with real time with the OP3 physics load.
-The controller was tuned at this RTF. Testing at RTF=1.0 is a known next
-step to verify controller timing is correct at real speed.
+The controller was tuned at this RTF. Controller behaviour at RTF=1.0 is an open question.
 
 ## Known issues
 
