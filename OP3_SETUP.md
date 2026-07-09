@@ -78,11 +78,12 @@ mode 20
 
 Watch for AP_Biomimetic: standing in the console. Gait starts immediately after.
 
-## Sim runs at real_time_factor=0.2
+## real_time_factor note
 
-The SDF sets real_time_factor=0.2 so simulation runs at 1/5 real speed.
-This is intentional -- the JPC controllers need small timesteps to stay stable.
-GAIT_PERIOD=0.3 produces one full gait cycle every 1.5 real seconds.
+The SDF has real_time_factor=0.2 but this is not intentional -- it reflects
+Gazebo struggling to keep up with real time with the OP3 physics load.
+The controller was tuned at this RTF. Testing at RTF=1.0 is a known next
+step to verify controller timing is correct at real speed.
 
 ## Known issues
 
