@@ -29,7 +29,7 @@
   </model>
     <model name='robotis_op3'>
       <static>false</static>
-      <pose>0 0 0.57 0.12 0 3.14159</pose>
+      <pose>0 0 0.57 0 0 3.14159</pose>
     <link name='base'>
       <inertial>
         <pose>-0.015010000000000001 0.00012999999999999999 0.065820000000000004 0 0 0</pose>
