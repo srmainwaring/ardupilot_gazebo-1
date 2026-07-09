@@ -31,7 +31,7 @@ pip install -r requirements.txt
 Add to ~/.bashrc:
 ```bash
 export GZ_IP=127.0.0.1
-export GZ_SIM_RESOURCE_PATH=/home/neeta-misericordia/ardupilot_gazebo/models:/home/neeta-misericordia/ardupilot_gazebo/worlds:/home/neeta-misericordia/humanoid-ardupilot-sitl/worlds:/home/neeta-misericordia/SITL_Models/Gazebo/models:/home/neeta-misericordia/SITL_Models/Gazebo/worlds:/home/neeta-misericordia/ros2_ws/install/ros_gz_h1_gazebo/share/ros_gz_h1_gazebo/worlds:/home/neeta-misericordia/ros2_ws/install/ros_gz_h1_description/share:/opt/ros/jazzy/share:/home/neeta-misericordia/ardupilot_gazebo/models:/home/neeta-misericordia/ardupilot_gazebo/worlds:/home/neeta-misericordia/humanoid-ardupilot-sitl/worlds:/home/neeta-misericordia/SITL_Models/Gazebo/models:/home/neeta-misericordia/SITL_Models/Gazebo/worlds::~/ardupilot_gazebo-1/models
+export GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:~/ardupilot_gazebo-1/models
 ```
 
 ## Running the simulation
